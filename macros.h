@@ -1,23 +1,11 @@
 /*
-File:   defines.h
+File:   macros.h
 Author: Taylor Robbins
-Date:   11\22\2022
-This is #included by common.h
+Date:   11\27\2022
 */
 
-#ifndef _DEFINES_H
-#define _DEFINES_H
-
-#define USE_CUSTOM_STD_LIBRARY 1
-#define PRINT_BUFFER_SIZE      512 //chars
-
-#define WASM_MEM_PAGE_SIZE     Kilobytes(4)
-
-#define MAIN_HEAP_PAGE_SIZE      Kilobytes(128)
-#define TEMP_ARENA_SIZE          Kilobytes(128)
-#define TEMP_ARENA_MAX_NUM_MARKS 64
-
-// #define PRINTF_DISABLE_SUPPORT_FLOAT
+#ifndef _MACROS_H
+#define _MACROS_H
 
 // +--------------------------------------------------------------+
 // |                       Global Constants                       |
@@ -80,4 +68,4 @@ This is #included by common.h
 #define ClearStruct(Structure) memset(&(Structure), '\0', sizeof((Structure)))
 #define ClearPointer(Pointer)  memset((Pointer), '\0', sizeof(*(Pointer)));
 
-#endif //  _DEFINES_H
+#endif //  _MACROS_H

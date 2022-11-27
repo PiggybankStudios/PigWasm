@@ -24,6 +24,7 @@ Description:
 #include "opengl.h"
 #include "small_printf/printf.h"
 
+#include "macros.h"
 #include "assert.h"
 #include "glue_api.h"
 
