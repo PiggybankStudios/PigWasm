@@ -264,4 +264,54 @@ inline r64 SawR64(r64 angle)
 	}
 }
 
+// +================================+
+// | Primitive Conversion Functions |
+// +================================+
+//TODO: Make these functions work without pointer arithmetic
+inline u8 StoreI8inU8(i8 value)
+{
+	u8 result = *((u8*)&value);
+	return result;
+}
+inline i8 ReadI8FromU8(u8 value)
+{
+	i8 result = *((i8*)&value);
+	return result;
+}
+inline i8 ClampI32toI8(i32 value)
+{
+	if (value > 127) { return 127; }
+	if (value < -128) { return -128; }
+	return (i8)value;
+}
+inline u8 ClampI32toU8(i32 value)
+{
+	if (value > 255) { return 255; }
+	if (value < 0) { return 0; }
+	return (u8)value;
+}
+inline i16 ClampI32toI16(i32 value)
+{
+	if (value > 32767) { return 32767; }
+	if (value < -32768) { return -32768; }
+	return (i16)value;
+}
+inline u32 ClampI32toU32(i32 value)
+{
+	if (value < 0) { return 0; }
+	return (u32)value;
+}
+inline i32 ClampU32toI32(u32 value)
+{
+	if (value > 0x7FFFFFFF) { return (i32)0x7FFFFFFF; }
+	return (i32)value;
+}
+inline i16 ClampR32toI16(r32 value)
+{
+	i32 roundedValue = RoundR32i(value);
+	if (roundedValue > 0x7FFF) { return 0x7FFF; }
+	else if (roundedValue < -0x8000) { return -0x8000; }
+	else { return (i16)roundedValue; }
+}
+
 #endif //  _INTRINSICS_H

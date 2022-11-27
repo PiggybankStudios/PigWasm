@@ -36,12 +36,61 @@ enum VertexAttribute_t
 	VertexAttribute_All      = 0x0F,
 	VertexAttribute_NumAttributes = 4,
 };
+inline const char* GetVertexAttributeGlslName(VertexAttribute_t attribute)
+{
+	switch (attribute)
+	{
+		case VertexAttribute_Position: return "inPosition";
+		case VertexAttribute_Color:    return "inColor";
+		case VertexAttribute_TexCoord: return "inTexCoord";
+		case VertexAttribute_Normal:   return "inNormal";
+		default: return "Unknown";
+	}
+}
+
+enum ShaderUniform_t
+{
+	ShaderUniform_WorldMatrix = 0,
+	ShaderUniform_ViewMatrix,
+	ShaderUniform_ProjectionMatrix,
+	ShaderUniform_Texture1,
+	ShaderUniform_Texture1Size,
+	ShaderUniform_Texture2,
+	ShaderUniform_Texture2Size,
+	ShaderUniform_SourceRec1,
+	ShaderUniform_SourceRec2,
+	ShaderUniform_Color1,
+	ShaderUniform_Color2,
+	ShaderUniform_NumUniforms,
+};
+inline const char* GetShaderUniformGlslName(ShaderUniform_t uniform)
+{
+	switch (uniform)
+	{
+		case ShaderUniform_WorldMatrix:      return "WorldMatrix";
+		case ShaderUniform_ViewMatrix:       return "ViewMatrix";
+		case ShaderUniform_ProjectionMatrix: return "ProjectionMatrix";
+		case ShaderUniform_Texture1:         return "Texture1";
+		case ShaderUniform_Texture1Size:     return "Texture1Size";
+		case ShaderUniform_Texture2:         return "Texture2";
+		case ShaderUniform_Texture2Size:     return "Texture2Size";
+		case ShaderUniform_SourceRec1:       return "SourceRec1";
+		case ShaderUniform_SourceRec2:       return "SourceRec2";
+		case ShaderUniform_Color1:           return "Color1";
+		case ShaderUniform_Color2:           return "Color2";
+		default: return "Unknown";
+	}
+}
 
 struct Shader_t
 {
 	GLuint vertId;
 	GLuint fragId;
 	GLuint glId;
+	
+	u8 attributes;
+	GLint attributeLocations[VertexAttribute_NumAttributes];
+	GLint uniformLocations[ShaderUniform_NumUniforms];
 };
 
 struct VertBuffer_t

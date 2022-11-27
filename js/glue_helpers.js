@@ -216,6 +216,15 @@ function verifyShaderId(shaderId)
 	if (webglObjects.shaders[shaderId] == null) { return "ShaderId is for a destroyed shader!"; }
 	return null;
 }
+function verifyUniformLocationId(locationId)
+{
+	if (typeof(locationId) != "number") { return "UniformLocationId is not a number!"; }
+	if (locationId == 0) { return "UniformLocationId is 0!"; }
+	if (webglObjects == null || webglObjects.uniforms == null) { return "Uniforms array has not been initialized yet!"; }
+	if (locationId >= webglObjects.uniforms.length) { return "UniformLocationId is too high!"; }
+	if (webglObjects.uniforms[locationId] == null) { return "UniformLocationId is for a destroyed uniform!"; }
+	return null;
+}
 function verifyVertBufferId(vertBufferId)
 {
 	if (typeof(vertBufferId) != "number") { return "VertBufferId is not a number!"; }

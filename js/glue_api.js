@@ -20,6 +20,11 @@ function RequestMoreMemoryPages(numPages)
 	wasmMemory.grow(numPages);
 }
 
+function PrintoutStack()
+{
+	console.trace();
+}
+
 function DebugOutput(level, messagePtr)
 {
 	if (level >= 6) //DbgLevel_Error
@@ -58,13 +63,21 @@ function GetMousePosition(xPosOutPntr, yPosOutPntr)
 	WritePntr_R32(yPosOutPntr, mousePositionY);
 }
 
-function TestFunction(bufferLength, bufferPntr)
+function TestFunction()
 {
-	writeToWasmCharBuffer(bufferLength, bufferPntr, "Hello WASM!");
+	// writeToWasmCharBuffer(bufferLength, bufferPntr, "Hello WASM!");
+	fetch("http://localhost:8000/Resources/icon16.png") //, { cache: "no-cache" }
+	.then(data => {
+		let blob = data.blob();
+		console.log(blob);
+		let spacePntr = wasmModule.exports.AllocateMemory(blob.size, ArenaName_MainHeap);
+		console.log("Allocated at " + spacePntr);
+	});
 }
 
 apiFuncs_custom = {
 	RequestMoreMemoryPages: RequestMoreMemoryPages,
+	PrintoutStack: PrintoutStack,
 	DebugOutput: DebugOutput,
 	GetCanvasSize: GetCanvasSize,
 	GetMousePosition: GetMousePosition,
@@ -96,26 +109,44 @@ function glGetProgramiv(programId, pname, params)
 	// console.log("Programiv: " + value);
 	WritePntr_I32(params, value);
 }
-function glGetShaderInfoLog(shaderId, maxLength, length, infoLog)
+function glGetShaderInfoLog(shaderId, maxLength, lengthOutPntr, infoLogPntr)
 {
-	console.assert(shaderId < webglObjects.shaders.length, "Invalid shader ID passed to glGetShaderInfoLog");
+	if (!verifyParameter(verifyShaderId(shaderId), "glGetShaderInfoLog", "shaderId", shaderId)) { return; }
 	var logString = canvasContextGl.getShaderInfoLog(webglObjects.shaders[shaderId]);
 	if (logString.length > maxLength) { logString = logString.substring(0, maxLength); }
 	// console.log("Shader info log:", logString);
-	WritePntr_I32(length, logString.length);
-	writeToWasmCharBuffer(maxLength, infoLog, logString);
+	WritePntr_I32(lengthOutPntr, logString.length);
+	writeToWasmCharBuffer(maxLength, infoLogPntr, logString);
 }
-function glGetProgramInfoLog(program, maxLength, length, infoLog)
+function glGetProgramInfoLog(programId, maxLength, lengthOutPntr, infoLogPntr)
 {
-	console.error("glGetProgramInfoLog is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyProgramId(programId), "glGetProgramInfoLog", "programId", programId)) { return; }
+	var logString = canvasContextGl.getProgramInfoLog(webglObjects.programs[programId]);
+	if (logString.length > maxLength) { logString = logString.substring(0, maxLength); }
+	// console.log("Program info log:", logString);
+	WritePntr_I32(lengthOutPntr, logString.length);
+	writeToWasmCharBuffer(maxLength, infoLogPntr, logString);
 }
-function glGetAttribLocation(program, name) //returns GLint
+function glGetAttribLocation(programId, namePntr) //returns GLint
 {
-	console.error("glGetAttribLocation is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyProgramId(programId), "glGetAttribLocation", "programId", programId)) { return; }
+	let result = canvasContextGl.getAttribLocation(webglObjects.programs[programId], wasmPntrToJsString(namePntr));
+	return result;
 }
-function glGetUniformLocation(program, name) //returns GLint
+function glGetUniformLocation(programId, namePntr) //returns GLint
 {
-	console.error("glGetUniformLocation is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyProgramId(programId), "glGetUniformLocation", "programId", programId)) { return; }
+	let uniformLocationObj = canvasContextGl.getUniformLocation(webglObjects.programs[programId], wasmPntrToJsString(namePntr));
+	if (uniformLocationObj != null)
+	{
+		let locationId = webglObjects.uniforms.length;
+		webglObjects.uniforms.push(uniformLocationObj);
+		return locationId;
+	}
+	else
+	{
+		return -1;
+	}
 }
 function glGetTextureSubImage(texture, level, xoffset, yoffset, zoffset, width, height, depth, format, type, bufSize, pixels)
 {
@@ -317,29 +348,36 @@ function glFramebufferTexture2D(target, attachment, textarget, texture, level)
 {
 	console.error("glFramebufferTexture2D is unimplemented!"); //TODO: Implement me!
 }
-function glUniform1i(location, v0)
+function glUniform1i(locationId, v0)
 {
-	console.error("glUniform1i is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform1i", "locationId", locationId)) { return; }
+	canvasContextGl.uniform1i(webglObjects.uniforms[locationId], v0);
 }
-function glUniform1f(location, v0)
+function glUniform1f(locationId, v0)
 {
-	console.error("glUniform1f is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform1f", "locationId", locationId)) { return; }
+	canvasContextGl.uniform1f(webglObjects.uniforms[locationId], v0);
 }
-function glUniform2f(location, v0, v1)
+function glUniform2f(locationId, v0, v1)
 {
-	console.error("glUniform2f is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform2f", "locationId", locationId)) { return; }
+	canvasContextGl.uniform2f(webglObjects.uniforms[locationId], v0, v1);
 }
-function glUniform3f(location, v0, v1, v2)
+function glUniform3f(locationId, v0, v1, v2)
 {
-	console.error("glUniform3f is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform3f", "locationId", locationId)) { return; }
+	canvasContextGl.uniform3f(webglObjects.uniforms[locationId], v0, v1, v2);
 }
-function glUniform4f(location, v0, v1, v2, v3)
+function glUniform4f(locationId, v0, v1, v2, v3)
 {
-	console.error("glUniform4f is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform4f", "locationId", locationId)) { return; }
+	canvasContextGl.uniform4f(webglObjects.uniforms[locationId], v0, v1, v2, v3);
 }
-function glUniformMatrix4fv(location, count, transpose, value)
+function glUniformMatrix4fv(locationId, count, transpose, valuePntr)
 {
-	console.error("glUniformMatrix4fv is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniformMatrix4fv", "locationId", locationId)) { return; }
+	let matrixArray = new Float32Array(wasmMemory.buffer, valuePntr, count * (4 * 4)); //4 * 4 for 4x4 size matrix
+	canvasContextGl.uniformMatrix4fv(webglObjects.uniforms[locationId], transpose, matrixArray);
 }
 function glViewport(x, y, width, height)
 {

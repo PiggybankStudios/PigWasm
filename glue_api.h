@@ -14,10 +14,11 @@ This is #included by common.h
 // |                       Custom Functions                       |
 // +--------------------------------------------------------------+
 GLUE_FUNC void RequestMoreMemoryPages(u32 numPages);
+GLUE_FUNC void PrintoutStack();
 GLUE_FUNC void DebugOutput(int level, const char* message);
 GLUE_FUNC void GetCanvasSize(r32* widthOut, r32* heightOut);
 GLUE_FUNC void GetMousePosition(r32* xPosOut, r32* yPosOut);
-GLUE_FUNC void TestFunction(u32 bufferLength, char* bufferPntr);
+GLUE_FUNC void TestFunction();
 
 // +--------------------------------------------------------------+
 // |                       OpenGL Functions                       |

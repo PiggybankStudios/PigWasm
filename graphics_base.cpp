@@ -22,6 +22,7 @@ void CreateShader(Shader_t* shaderOut, const char* vertSource, const char* fragS
 	GLsizei parseLogLength = 0;
 	GLint linkStatus = 0;
 	
+	ClearPointer(shaderOut);
 	shaderOut->vertId = glCreateShader(GL_VERTEX_SHADER);
 	shaderOut->fragId = glCreateShader(GL_FRAGMENT_SHADER);
 	shaderOut->glId = glCreateProgram();
@@ -51,6 +52,29 @@ void CreateShader(Shader_t* shaderOut, const char* vertSource, const char* fragS
 	if (linkStatus == 0)
 	{
 		WriteLine_E("Failed to link the shader program!");
+	}
+	
+	glGetProgramInfoLog(shaderOut->glId, ArrayCount(parseLogBuffer), &parseLogLength, &parseLogBuffer[0]);
+	if (parseLogLength > 0)
+	{
+		PrintLine_W("Shader program linking had %d char log:\n%s", parseLogLength, &parseLogBuffer[0]);
+	}
+	
+	for (u32 aIndex = 0; aIndex < VertexAttribute_NumAttributes; aIndex++)
+	{
+		VertexAttribute_t attribute = (VertexAttribute_t)(1 << aIndex);
+		const char* attributeName = GetVertexAttributeGlslName(attribute);
+		GLint attribLocation = glGetAttribLocation(shaderOut->glId, attributeName);
+		shaderOut->attributeLocations[aIndex] = attribLocation;
+		if (attribLocation >= 0) { FlagSet(shaderOut->attributes, attribute); }
+	}
+	
+	for (u32 uIndex = 0; uIndex < ShaderUniform_NumUniforms; uIndex++)
+	{
+		ShaderUniform_t uniform = (ShaderUniform_t)uIndex;
+		const char* uniformName = GetShaderUniformGlslName(uniform);
+		GLint uniformLocation = glGetUniformLocation(shaderOut->glId, uniformName);
+		shaderOut->uniformLocations[uIndex] = uniformLocation;
 	}
 }
 
