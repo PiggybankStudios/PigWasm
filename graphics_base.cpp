@@ -10,6 +10,7 @@ Description:
 #include "graphics_base.h"
 
 #include "vectors.h"
+#include "debug.h"
 
 static GLchar parseLogBuffer[1024];
 

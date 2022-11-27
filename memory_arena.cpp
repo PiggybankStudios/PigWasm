@@ -12,6 +12,7 @@ Description:
 
 #include "memory.h"
 #include "debug.h"
+#include "intrinsics.h"
 
 // +--------------------------------------------------------------+
 // |                       Helper Functions                       |

@@ -70,5 +70,6 @@ void CreateVertArrayObj(VertArrayObj_t* vaoOut, bool is3d, u8 attributes);
 // +--------------------------------------------------------------+
 void BindShader(Shader_t* shader);
 void BindVertBuffer(VertBuffer_t* buffer);
+void BindVertArrayObj(VertArrayObj_t* vao);
 
 #endif //  _GRAPHICS_BASE_H

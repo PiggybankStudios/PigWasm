@@ -10,6 +10,8 @@ Description:
 #include "common.h"
 #include "helpers.h"
 
+#include "intrinsics.h"
+
 r32 OscillateBy(u64 timeSource, r32 min, r32 max, u64 periodMs, u64 offset)
 {
 	r32 lerpValue = (SinR32((((timeSource + offset) % periodMs) / (r32)periodMs) * 2*Pi32) + 1.0f) / 2.0f;
