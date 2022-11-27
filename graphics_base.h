@@ -4,7 +4,7 @@ Author: Taylor Robbins
 Date:   11\23\2022
 */
 
-#include "shared/vectors.h"
+#include "vectors.h"
 
 #ifndef _GRAPHICS_BASE_H
 #define _GRAPHICS_BASE_H

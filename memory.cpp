@@ -7,9 +7,9 @@ Description:
 */
 
 #include "common.h"
-#include "shared/memory.h"
+#include "memory.h"
 
-#include "shared/memory_arena.h"
+#include "memory_arena.h"
 
 // +--------------------------------------------------------------+
 // |                          Heap Base                           |

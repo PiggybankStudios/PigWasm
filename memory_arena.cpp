@@ -8,10 +8,10 @@ Description:
 */
 
 #include "common.h"
-#include "shared/memory_arena.h"
+#include "memory_arena.h"
 
-#include "shared/memory.h"
-#include "shared/debug.h"
+#include "memory.h"
+#include "debug.h"
 
 // +--------------------------------------------------------------+
 // |                       Helper Functions                       |

@@ -9,7 +9,7 @@ Description:
 #include "common.h"
 #include "graphics_base.h"
 
-#include "shared/vectors.h"
+#include "vectors.h"
 
 static GLchar parseLogBuffer[1024];
 

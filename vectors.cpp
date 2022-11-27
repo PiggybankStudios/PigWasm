@@ -7,7 +7,7 @@ Description:
 */
 
 #include "common.h"
-#include "shared/vectors.h"
+#include "vectors.h"
 
 inline v2 NewVec2(r32 x, r32 y)
 {

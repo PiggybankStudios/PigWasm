@@ -8,7 +8,7 @@ Description:
 */
 
 #include "common.h"
-#include "shared/helpers.h"
+#include "helpers.h"
 
 r32 OscillateBy(u64 timeSource, r32 min, r32 max, u64 periodMs, u64 offset)
 {
