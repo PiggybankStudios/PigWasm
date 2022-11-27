@@ -37,7 +37,7 @@ echo Compiling %ProjectName%.o...
 clang %SourceDirectory%\compile_me.cpp -c %CompilerFlags% %IncludeDirectories% -o %ProjectName%.o
 echo Linking...
 wasm-ld %ProjectName%.o %LinkerFlags% -o %ProjectName%.wasm
-python "..\CombineFiles.py" "%BuildDirectory%\glue_combined.js" "%JavascriptFolder%\glue_defines.js" "%JavascriptFolder%\glue_helpers.js" "%JavascriptFolder%\glue_api.js" "%JavascriptFolder%\glue.js"
+python "CombineFiles.py" "%BuildDirectory%\glue_combined.js" "%JavascriptFolder%\glue_defines.js" "%JavascriptFolder%\glue_helpers.js" "%JavascriptFolder%\glue_api.js" "%JavascriptFolder%\glue.js"
 
 if "%CopyToDataDirectory%"=="1" (
 	echo [Copying %ProjectName%.wasm to data directory]
