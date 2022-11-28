@@ -45,6 +45,7 @@ typedef u32    GLsizeiptr;
 #define GL_STENCIL_BUFFER_BIT 0x00000400
 #define GL_COLOR_BUFFER_BIT   0x00004000
 #define GL_CULL_FACE          0x0B44
+#define GL_BLEND              0x0BE2
 #define GL_BYTE               0x1400
 #define GL_UNSIGNED_BYTE      0x1401
 #define GL_SHORT              0x1402

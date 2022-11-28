@@ -10,10 +10,15 @@ function js_cosf(value)
 {
 	return Math.cos(value);
 }
+function js_roundf(value)
+{
+	return Math.round(value);
+}
 
 apiFuncs_intrinsics = {
 	sinf: js_sinf,
 	cosf: js_cosf,
+	roundf: js_roundf,
 };
 
 // +--------------------------------------------------------------+
