@@ -8,6 +8,18 @@ Date:   11\26\2022
 #define _INTRINSICS_H
 
 // +==============================+
+// |             Sqrt             |
+// +==============================+
+inline r32 SqrtR32(r32 value)
+{
+	return sqrtf(value);
+}
+inline r64 SqrtR64(r64 value)
+{
+	return sqrt(value);
+}
+
+// +==============================+
 // |             Abs              |
 // +==============================+
 inline r32 AbsR32(r32 value)
@@ -312,6 +324,18 @@ inline i16 ClampR32toI16(r32 value)
 	if (roundedValue > 0x7FFF) { return 0x7FFF; }
 	else if (roundedValue < -0x8000) { return -0x8000; }
 	else { return (i16)roundedValue; }
+}
+
+// +==============================+
+// |             Lerp             |
+// +==============================+
+inline r32 LerpR32(r32 val1, r32 val2, r32 amount)
+{
+	return (val1 + (val2 - val1) * amount);
+}
+inline r64 LerpR64(r64 val1, r64 val2, r64 amount)
+{
+	return (val1 + (val2 - val1) * amount);
 }
 
 #endif //  _INTRINSICS_H

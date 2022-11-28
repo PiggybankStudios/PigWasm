@@ -17,3 +17,12 @@ r32 OscillateBy(u64 timeSource, r32 min, r32 max, u64 periodMs, u64 offset)
 	r32 lerpValue = (SinR32((((timeSource + offset) % periodMs) / (r32)periodMs) * 2*Pi32) + 1.0f) / 2.0f;
 	return min + (max - min) * lerpValue;
 }
+
+bool DoRecsIntersect(v2 pos1, v2 size1, v2 pos2, v2 size2)
+{
+	if (pos1.x + size1.x < pos2.x) { return false; }
+	if (pos1.y + size1.y < pos2.y) { return false; }
+	if (pos2.x + size2.x < pos1.x) { return false; }
+	if (pos2.y + size2.y < pos1.y) { return false; }
+	return true;
+}

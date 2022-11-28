@@ -9,4 +9,21 @@ Description:
 #include "common.h"
 #include "vectors.h"
 
-//TODO: Add stuff here!
+#include "intrinsics.h"
+
+// +--------------------------------------------------------------+
+// |                          Functions                           |
+// +--------------------------------------------------------------+
+r32 Vec2Length(v2 vector)
+{
+	return SqrtR32(vector.x * vector.x + vector.y * vector.y);
+}
+v2 Vec2Normalize(v2 vector)
+{
+	if (vector.x == 0 && vector.y == 0) { return vector; }
+	r32 length = Vec2Length(vector);
+	v2 result;
+	result.x = vector.x / length;
+	result.y = vector.y / length;
+	return result;
+}

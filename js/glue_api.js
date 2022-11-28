@@ -6,9 +6,14 @@ function js_sinf(value)
 {
 	return Math.sin(value);
 }
+function js_cosf(value)
+{
+	return Math.cos(value);
+}
 
 apiFuncs_intrinsics = {
 	sinf: js_sinf,
+	cosf: js_cosf,
 };
 
 // +--------------------------------------------------------------+

@@ -57,4 +57,7 @@ inline v4 NewVec4(r32 x, r32 y, r32 z, r32 w)
 	return result;
 }
 
+r32 Vec2Length(v2 vector);
+v2 Vec2Normalize(v2 vector);
+
 #endif //  _VECTORS_H

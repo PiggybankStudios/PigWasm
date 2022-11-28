@@ -28,7 +28,25 @@ async function initialize()
 	wasmModule = await loadWasmModule(WASM_FILE_PATH, wasmEnvironment);
 	// console.log("WasmModule:", wasmModule);
 	
-	wasmModule.exports.Initialize(INITIAL_WASM_MEMORY_PAGE_COUNT);
+	let initializeTimestamp = Math.floor(Date.now() / 1000); //TODO: Should we be worried about this being a 32-bit float?
+	wasmModule.exports.Initialize(INITIAL_WASM_MEMORY_PAGE_COUNT, initializeTimestamp);
+	
+	window.addEventListener("keydown", function(event)
+	{
+		if (event.key == " ")
+		{
+			wasmModule.exports.HandleKeyPress(0);
+		}
+		else if (event.key == "r")
+		{
+			wasmModule.exports.HandleKeyPress(1);
+		}
+		else
+		{
+			// console.warn("Unknown key name \"" + event.key + "\"");
+		}
+	});
+	
 	wasmModule.exports.UpdateAndRender(0);
 	
 	function renderFrame()
