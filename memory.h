@@ -35,6 +35,7 @@ extern u32 currentWasmPageCount;
 extern u32 currentHeapHeadAddress;
 extern MemArena_t* wasmMemory;
 extern MemArena_t* mainHeap;
+extern MemArena_t* mainHeapDebug;
 extern MemArena_t* tempArena;
 
 // +--------------------------------------------------------------+

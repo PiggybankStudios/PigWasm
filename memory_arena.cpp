@@ -75,7 +75,6 @@ void InitMemArena_Alias(MemArena_t* arena, MemArena_t* sourceArena)
 }
 void InitMemArena_StdHeap(MemArena_t* arena)
 {
-	#if !GY_CUSTOM_STD_LIB
 	NotNull(arena);
 	ClearPointer(arena);
 	arena->type = MemArenaType_StdHeap;
@@ -84,9 +83,6 @@ void InitMemArena_StdHeap(MemArena_t* arena)
 	
 	FlagSet(arena->flags, MemArenaFlag_TelemetryEnabled);
 	arena->highAllocMark = arena->numAllocations;
-	#else
-	AssertMsg_(false, "StdHeap type memory arena is not supported without the standard library being present!");
-	#endif //GY_CUSTOM_STD_LIB
 }
 void InitMemArena_FixedHeap(MemArena_t* arena, u64 size, void* memoryPntr, AllocAlignment_t alignment)
 {
@@ -540,6 +536,129 @@ u64 GetNumMemMarks(MemArena_t* arena)
 }
 
 // +--------------------------------------------------------------+
+// |                    GetAllocSize Function                     |
+// +--------------------------------------------------------------+
+u64 GetAllocSize(MemArena_t* arena, const void* allocPntr)
+{
+	NotNull(arena);
+	AssertMsg(arena->type != MemArenaType_None, "Tried to GetAllocSize from uninitialized arena");
+	
+	u64 result = 0;
+	switch (arena->type)
+	{
+		// +==============================+
+		// |      MemArenaType_Alias      |
+		// +==============================+
+		case MemArenaType_Alias:
+		{
+			NotNull(arena->sourceArena);
+			result = GetAllocSize(arena->sourceArena, allocPntr);
+		} break;
+		
+		// +==============================+
+		// |    MemArenaType_FixedHeap    |
+		// +==============================+
+		case MemArenaType_FixedHeap:
+		{
+			NotNull(arena->mainPntr);
+			
+			u64 allocOffset = 0;
+			u8* allocBytePntr = (u8*)arena->mainPntr;
+			u64 sectionIndex = 0;
+			while (allocOffset < arena->size)
+			{
+				HeapAllocPrefix_t* prefixPntr = (HeapAllocPrefix_t*)allocBytePntr;
+				u8* afterPrefixPntr = (allocBytePntr + sizeof(HeapAllocPrefix_t));
+				bool isSectionFilled = IsAllocPrefixFilled(prefixPntr->size);
+				u64 sectionSize = UnpackAllocPrefixSize(prefixPntr->size);
+				AssertMsg(sectionSize >= sizeof(HeapAllocPrefix_t), "Found an allocation header that claimed to be smaller than the header itself in Fixed Heap");
+				u64 afterPrefixSize = sectionSize - sizeof(HeapAllocPrefix_t);
+				
+				if ((u8*)allocPntr >= allocBytePntr && (u8*)allocPntr < allocBytePntr + sectionSize)
+				{
+					AssertMsg((u8*)allocPntr >= afterPrefixPntr, "Tried to GetAllocSize on a pointer that pointed into a Fixed Heap header. This is a corrupt pointer!");
+					//TODO: Check if the allocation was actually aligned. Be more strict if it wasn't aligned
+					AssertMsg((u8*)allocPntr <= afterPrefixPntr + OffsetToAlign(afterPrefixPntr, AllocAlignment_Max), "Tried to GetAllocSize on a pointer that pointed to the middle of a Fixed Heap section. This is a corrupt pointer!");
+					AssertMsg(isSectionFilled, "Tried to GetAllocSize on section in Fixed Heap that has already been freed. This is a memory management bug");
+					result = afterPrefixSize;
+					break;
+				}
+				
+				allocOffset += sectionSize;
+				allocBytePntr += sectionSize;
+				sectionIndex++;
+			}
+			UNUSED(sectionIndex); //used for debug purposes
+			AssertMsg(result != 0, "Tried to GetAllocSize on an unknown pointer from Fixed Heap. The pointer must be corrupt or was asked about in the wrong memArena. This is a memory management bug");
+		} break;
+		
+		// +==============================+
+		// |    MemArenaType_PagedHeap    |
+		// +==============================+
+		case MemArenaType_PagedHeap:
+		{
+			HeapPageHeader_t* pageHeader = (HeapPageHeader_t*)arena->headerPntr;
+			u64 pageIndex = 0;
+			bool foundAlloc = false;
+			while (pageHeader != nullptr)
+			{
+				u8* pageBase = (u8*)(pageHeader + 1);
+				if (allocPntr >= pageBase && allocPntr < pageBase + pageHeader->size)
+				{
+					u64 allocOffset = 0;
+					u8* allocBytePntr = pageBase;
+					u64 sectionIndex = 0;
+					HeapAllocPrefix_t* prevPrefixPntr = nullptr;
+					while (allocOffset < pageHeader->size)
+					{
+						HeapAllocPrefix_t* prefixPntr = (HeapAllocPrefix_t*)allocBytePntr;
+						u8* afterPrefixPntr = (allocBytePntr + sizeof(HeapAllocPrefix_t));
+						bool isSectionFilled = IsAllocPrefixFilled(prefixPntr->size);
+						u64 sectionSize = UnpackAllocPrefixSize(prefixPntr->size);
+						AssertMsg(sectionSize >= sizeof(HeapAllocPrefix_t), "Found an allocation header that claimed to be smaller than the header itself in Paged Heap");
+						u64 afterPrefixSize = sectionSize - sizeof(HeapAllocPrefix_t);
+						
+						if ((u8*)allocPntr >= allocBytePntr && (u8*)allocPntr < allocBytePntr + sectionSize)
+						{
+							AssertMsg((u8*)allocPntr >= afterPrefixPntr, "Tried to GetAllocSize on a pointer that pointed into a Paged Heap header. This is a corrupt pointer!");
+							//TODO: Check if the allocation was actually aligned. Be more strict if it wasn't aligned
+							AssertMsg((u8*)allocPntr <= afterPrefixPntr + OffsetToAlign(afterPrefixPntr, AllocAlignment_Max), "Tried to GetAllocSize on a pointer that pointed to the middle of a Paged Heap section. This is a corrupt pointer!");
+							AssertMsg(isSectionFilled, "Tried to GetAllocSize on section in Paged Heap that has already been freed. This is a memory management bug");
+							result = afterPrefixSize;
+							foundAlloc = true;
+							break;
+						}
+						
+						prevPrefixPntr = prefixPntr;
+						allocOffset += sectionSize;
+						allocBytePntr += sectionSize;
+						sectionIndex++;
+					}
+					AssertMsg(foundAlloc, "We have a bug in our GetAllocSize walk. Couldn't find section that contained the pntr in this page!");
+					break;
+				}
+				
+				if (foundAlloc) { break; }
+				pageHeader = pageHeader->next;
+				pageIndex++;
+			}
+			AssertMsg(result != 0, "Tried to GetAllocSize on pntr that isn't in any of the pages of this arena!");
+		} break;
+		
+		// +==============================+
+		// |    Unsupported Arena Type    |
+		// +==============================+
+		default:
+		{
+			PrintLine_E("Unsupported arena type in GetAllocSize: %s", GetMemArenaTypeStr(arena->type));
+			AssertMsg(false, "Tried to GetAllocSize on arena type that doesn't support giving that information!");
+		} break;
+	}
+	
+	return result;
+}
+
+// +--------------------------------------------------------------+
 // |                      Allocate Function                       |
 // +--------------------------------------------------------------+
 void* AllocMem(MemArena_t* arena, u64 numBytes, AllocAlignment_t alignOverride)
@@ -551,8 +670,7 @@ void* AllocMem(MemArena_t* arena, u64 numBytes, AllocAlignment_t alignOverride)
 	{
 		MyDebugBreak();
 	}
-	
-	PrintLine_D("AllocMem on %s for %llu bytes", GetMemArenaTypeStr(arena->type), numBytes);
+	if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("AllocMem on %s for %llu bytes (arena is %llu/%llu)", GetMemArenaTypeStr(arena->type), numBytes, arena->used, arena->size); }
 	
 	if (numBytes == 0) { return nullptr; }
 	if (IsFlagSet(arena->flags, MemArenaFlag_SingleAlloc) && arena->numAllocations > 0)
@@ -600,7 +718,6 @@ void* AllocMem(MemArena_t* arena, u64 numBytes, AllocAlignment_t alignOverride)
 			}
 		} break;
 		
-		#if !GY_CUSTOM_STD_LIB
 		// +==============================+
 		// |     MemArenaType_StdHeap     |
 		// +==============================+
@@ -622,7 +739,6 @@ void* AllocMem(MemArena_t* arena, u64 numBytes, AllocAlignment_t alignOverride)
 				if (arena->highAllocMark < arena->numAllocations) { arena->highAllocMark = arena->numAllocations; }
 			}
 		} break;
-		#endif //GY_CUSTOM_STD_LIB
 		
 		// +==============================+
 		// |    MemArenaType_FixedHeap    |
@@ -897,11 +1013,12 @@ void* AllocMem(MemArena_t* arena, u64 numBytes, AllocAlignment_t alignOverride)
 		// +==============================+
 		default:
 		{
-			PrintLine_E("Unsuported arena type in AllocMem: %u (size: %llu, used: %llu)", arena->type, arena->size, arena->used);
+			PrintLine_E("Unsupported arena type in AllocMem: %u (size: %llu, used: %llu)", arena->type, arena->size, arena->used);
 			AssertMsg(false, "Unsupported arena type in AllocMem. Maybe the arena is corrupted?");
 		} break;
 	}
 	
+	if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("AllocMem returned 0x%08X (arena is %llu/%llu)", (u32)result, arena->used, arena->size); }
 	AssertMsg(IsAlignedTo(result, alignment), "An arena has a bug where it tried to return mis-aligned memory");
 	return (void*)result;
 }
@@ -955,6 +1072,7 @@ bool FreeMem(MemArena_t* arena, void* allocPntr, u64 allocSize, bool ignoreNullp
 	{
 		MyDebugBreak();
 	}
+	if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("FreeMem on %s 0x%08X (%llu bytes) (arena is %llu/%llu)", GetMemArenaTypeStr(arena->type), (u32)allocPntr, allocSize, arena->used, arena->size); }
 	
 	bool result = false;
 	switch (arena->type)
@@ -984,7 +1102,6 @@ bool FreeMem(MemArena_t* arena, void* allocPntr, u64 allocSize, bool ignoreNullp
 			arena->used = arena->sourceArena->used;
 		} break;
 		
-		#if !GY_CUSTOM_STD_LIB
 		// +==============================+
 		// |     MemArenaType_StdHeap     |
 		// +==============================+
@@ -992,7 +1109,6 @@ bool FreeMem(MemArena_t* arena, void* allocPntr, u64 allocSize, bool ignoreNullp
 		{
 			AssertMsg(false, "MemArenaType_StdHeap does not support freeing in web assembly!!!");
 		} break;
-		#endif //GY_CUSTOM_STD_LIB
 		
 		// +==============================+
 		// |    MemArenaType_FixedHeap    |
@@ -1115,6 +1231,7 @@ bool FreeMem(MemArena_t* arena, void* allocPntr, u64 allocSize, bool ignoreNullp
 							
 							result = true;
 							foundAlloc = true;
+							if (oldSizeOut != nullptr) { *oldSizeOut = afterPrefixSize; }
 							
 							// +==============================+
 							// |   Free Paged Heap Section    |
@@ -1225,11 +1342,12 @@ bool FreeMem(MemArena_t* arena, void* allocPntr, u64 allocSize, bool ignoreNullp
 		// +==============================+
 		default:
 		{
-			PrintLine_E("Unsuported arena type in FreeMem: %u (size: %llu, used: %llu)", arena->type, arena->size, arena->used);
+			PrintLine_E("Unsupported arena type in FreeMem: %u (size: %llu, used: %llu)", arena->type, arena->size, arena->used);
 			AssertMsg(false, "Unsupported arena type in FreeMem. Maybe the arena is corrupted?");
 		} break;
 	}
 	
+	if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("After FreeMem (arena is %llu/%llu)", arena->used, arena->size); }
 	return result;
 }
 
@@ -1245,6 +1363,23 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 	if (IsFlagSet(arena->flags, MemArenaFlag_BreakOnRealloc) && (arena->debugBreakThreshold == 0 || newSize >= arena->debugBreakThreshold || oldSize >= arena->debugBreakThreshold))
 	{
 		MyDebugBreak();
+	}
+	if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput))
+	{
+		PrintLine_D("ReallocMem on %s 0x%08X (%llu bytes to %llu bytes) (arena is %llu/%llu)", GetMemArenaTypeStr(arena->type), (u32)allocPntr, oldSize, newSize, arena->used, arena->size);
+		if (allocPntr != nullptr)
+		{
+			PrintLine_D("First bytes before: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
+				((u8*)allocPntr)[0],
+				((u8*)allocPntr)[1],
+				((u8*)allocPntr)[2],
+				((u8*)allocPntr)[3],
+				((u8*)allocPntr)[4],
+				((u8*)allocPntr)[5],
+				((u8*)allocPntr)[6],
+				((u8*)allocPntr)[7]
+			);
+		}
 	}
 	
 	AllocAlignment_t alignment = (alignOverride != AllocAlignment_None) ? alignOverride : arena->alignment;
@@ -1285,6 +1420,10 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 					u64 reportedOldSize = oldSize;
 					bool freeSuccess = FreeMem(arena, allocPntr, oldSize, ignoreNullptr, &reportedOldSize);
 					AssertMsg(freeSuccess, "Failed to FreeMem after a failed AllocMem in ReallocMem! Something is probably wrong with this arena");
+					if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput) && oldSize != reportedOldSize)
+					{
+						PrintLine_D("Allocation was actually %llu bytes", reportedOldSize);
+					}
 					Assert(oldSize == 0 || oldSize == reportedOldSize);
 					oldSize = reportedOldSize;
 					increasingSize = (newSize > oldSize);
@@ -1296,7 +1435,7 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 			}
 			if (allocPntr != nullptr)
 			{
-				// if (oldSize == 0) { oldSize = GetAllocSize(arena, allocPntr); } //TODO: Uncomment me!
+				if (oldSize == 0) { oldSize = GetAllocSize(arena, allocPntr); }
 				Assert(oldSize != 0);
 				memcpy(result, allocPntr, oldSize);
 			}
@@ -1304,6 +1443,10 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 				u64 reportedOldSize = oldSize;
 				bool freeSuccess = FreeMem(arena, allocPntr, oldSize, ignoreNullptr, &reportedOldSize);
 				AssertMsg(freeSuccess, "Failed to FreeMem in ReallocMem! Does this arena type support freeing memory?");
+				if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput) && oldSize != reportedOldSize)
+				{
+					PrintLine_D("Allocation was actually %llu bytes", reportedOldSize);
+				}
 				Assert(oldSize == 0 || oldSize == reportedOldSize);
 				oldSize = reportedOldSize;
 				increasingSize = (newSize > oldSize);
@@ -1329,6 +1472,10 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 			NotNull(arena->sourceArena);
 			u64 reportedOldSize = oldSize;
 			result = (u8*)ReallocMem(arena->sourceArena, allocPntr, newSize, oldSize, alignment, ignoreNullptr, &reportedOldSize);
+			if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput) && oldSize != reportedOldSize)
+			{
+				PrintLine_D("Allocation was actually %llu bytes", reportedOldSize);
+			}
 			Assert(oldSize == 0 || oldSize == reportedOldSize);
 			oldSize = reportedOldSize;
 			increasingSize = (newSize > oldSize);
@@ -1351,7 +1498,6 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 			}
 		} break;
 		
-		#if !GY_CUSTOM_STD_LIB
 		// +==============================+
 		// |     MemArenaType_StdHeap     |
 		// +==============================+
@@ -1359,7 +1505,6 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 		{
 			AssertMsg(false, "MemArenaType_StdHeap does not support reallocating in web assembly!!!");
 		} break;
-		#endif //GY_CUSTOM_STD_LIB
 		
 		// +==============================+
 		// |    MemArenaType_FixedHeap    |
@@ -1398,11 +1543,28 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 		// +==============================+
 		default:
 		{
-			PrintLine_E("Unsuported arena type in ReallocMem: %u (size: %llu, used: %llu)", arena->type, arena->size, arena->used);
+			PrintLine_E("Unsupported arena type in ReallocMem: %u (size: %llu, used: %llu)", arena->type, arena->size, arena->used);
 			AssertMsg(false, "Unsupported arena type in ReallocMem. Maybe the arena is corrupted?");
 		} break;
 	}
 	
+	if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput))
+	{
+		if (result != nullptr)
+		{
+			PrintLine_D("First bytes after: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
+				((u8*)result)[0],
+				((u8*)result)[1],
+				((u8*)result)[2],
+				((u8*)result)[3],
+				((u8*)result)[4],
+				((u8*)result)[5],
+				((u8*)result)[6],
+				((u8*)result)[7]
+			);
+		}
+		PrintLine_D("ReallocMem 0x%08X->0x%08X (arena is %llu/%llu)", (u32)allocPntr, (u32)result, arena->used, arena->size);
+	}
 	return result;
 }
 
