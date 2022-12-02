@@ -10,6 +10,8 @@ Description:
 #include "common.h"
 #include "random_num_gen.h"
 
+#include "intrinsics.h"
+
 void CreateRandomSeries(RandomSeries_t* seriesOut, RandomAlg_t algorithm)
 {
 	ClearPointer(seriesOut);

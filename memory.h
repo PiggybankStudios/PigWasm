@@ -10,6 +10,25 @@ Date:   11\26\2022
 #define _MEMORY_H
 
 // +--------------------------------------------------------------+
+// |                   Enumeration and Typedefs                   |
+// +--------------------------------------------------------------+
+enum ArenaName_t
+{
+	ArenaName_MainHeap = 0,
+	ArenaName_TempArena,
+	ArenaName_NumNames,
+};
+inline const char* GetArenaNameStr(ArenaName_t name)
+{
+	switch (name)
+	{
+		case ArenaName_MainHeap: return "MainHeap";
+		case ArenaName_TempArena: return "TempArena";
+		default: return "Unknown";
+	}
+}
+
+// +--------------------------------------------------------------+
 // |                           Globals                            |
 // +--------------------------------------------------------------+
 extern u32 currentWasmPageCount;
@@ -25,5 +44,6 @@ void* GetHeapBasePntr();
 u32 GetHeapBaseAddress();
 
 void InitializeMemory(u32 startingWasmPageCount);
+MemArena_t* GetMemArenaByName(ArenaName_t arenaName);
 
 #endif //  _MEMORY_H

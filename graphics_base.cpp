@@ -11,6 +11,7 @@ Description:
 
 #include "vectors.h"
 #include "debug.h"
+#include "stb/stb_image.h"
 
 static GLchar parseLogBuffer[1024];
 

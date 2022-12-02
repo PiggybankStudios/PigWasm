@@ -7,6 +7,11 @@ Date:   11\27\2022
 #ifndef _RENDER_FUNCS_H
 #define _RENDER_FUNCS_H
 
+#include "graphics_base.h"
+#include "matrices.h"
+#include "vectors.h"
+#include "color.h"
+
 // +--------------------------------------------------------------+
 // |                          Structures                          |
 // +--------------------------------------------------------------+

@@ -552,6 +552,8 @@ void* AllocMem(MemArena_t* arena, u64 numBytes, AllocAlignment_t alignOverride)
 		MyDebugBreak();
 	}
 	
+	PrintLine_D("AllocMem on %s for %llu bytes", GetMemArenaTypeStr(arena->type), numBytes);
+	
 	if (numBytes == 0) { return nullptr; }
 	if (IsFlagSet(arena->flags, MemArenaFlag_SingleAlloc) && arena->numAllocations > 0)
 	{

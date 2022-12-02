@@ -65,3 +65,13 @@ void InitializeMemory(u32 startingWasmPageCount)
 	NotNull(tempArenaSpace);
 	InitMemArena_MarkedStack(tempArena, TEMP_ARENA_SIZE, tempArenaSpace, TEMP_ARENA_MAX_NUM_MARKS);
 }
+
+MemArena_t* GetMemArenaByName(ArenaName_t arenaName)
+{
+	switch (arenaName)
+	{
+		case ArenaName_MainHeap: return mainHeap;
+		case ArenaName_TempArena: return tempArena;
+		default: return nullptr;
+	}
+}

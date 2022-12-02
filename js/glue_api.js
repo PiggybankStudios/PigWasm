@@ -14,11 +14,22 @@ function js_roundf(value)
 {
 	return Math.round(value);
 }
+function js_ldexp(value, exponent)
+{
+	//TODO: Maybe we need to care about inaccuracy here?? Check https://blog.codefrau.net/2014/08/deconstructing-floats-frexp-and-ldexp.html
+	return value * Math.pow(2, exponent);
+}
+function js_pow(base, exponent)
+{
+	return Math.pow(base, exponent);
+}
 
 apiFuncs_intrinsics = {
-	sinf: js_sinf,
-	cosf: js_cosf,
+	sinf:   js_sinf,
+	cosf:   js_cosf,
 	roundf: js_roundf,
+	ldexp:  js_ldexp,
+	pow:    js_pow,
 };
 
 // +--------------------------------------------------------------+
@@ -73,16 +84,31 @@ function GetMousePosition(xPosOutPntr, yPosOutPntr)
 	WritePntr_R32(yPosOutPntr, mousePositionY);
 }
 
+function RequestFileAsync(requestId, filePathPntr)
+{
+	let filePath = wasmPntrToJsString(filePathPntr);
+	console.log("RequestFileAsync(" + requestId + ", " + filePath + ")");
+	fetch("http://localhost:8000/" + filePath, { cache: "no-cache" })
+	.then(data => data.blob())
+	.then(blob => blob.arrayBuffer())
+	.then(resultBuffer =>
+	{
+		console.log(resultBuffer);
+		let bufferU8 = new Uint8Array(resultBuffer);
+		let spacePntr = wasmModule.exports.AllocateMemory(resultBuffer.byteLength, ArenaName_MainHeap);
+		// console.log("Allocated at " + spacePntr);
+		let buf = new Uint8Array(wasmMemory.buffer);
+		for (let bIndex = 0; bIndex < resultBuffer.byteLength; bIndex++)
+		{
+			buf[spacePntr + bIndex] = bufferU8[bIndex];
+		}
+		wasmModule.exports.HandleFileReady(requestId, resultBuffer.byteLength, spacePntr);
+	});
+}
+
 function TestFunction()
 {
-	// writeToWasmCharBuffer(bufferLength, bufferPntr, "Hello WASM!");
-	fetch("http://localhost:8000/Resources/icon16.png") //, { cache: "no-cache" }
-	.then(data => {
-		let blob = data.blob();
-		console.log(blob);
-		let spacePntr = wasmModule.exports.AllocateMemory(blob.size, ArenaName_MainHeap);
-		console.log("Allocated at " + spacePntr);
-	});
+	return jsStringToWasmPntr("Hello from Javascript!", ArenaName_MainHeap);
 }
 
 apiFuncs_custom = {
@@ -91,6 +117,7 @@ apiFuncs_custom = {
 	DebugOutput: DebugOutput,
 	GetCanvasSize: GetCanvasSize,
 	GetMousePosition: GetMousePosition,
+	RequestFileAsync: RequestFileAsync,
 	TestFunction: TestFunction,
 };
 

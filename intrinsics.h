@@ -68,6 +68,22 @@ inline i64 RoundR64i(r64 value)
 }
 
 // +==============================+
+// |          RoundUpTo           |
+// +==============================+
+inline u32 RoundUpToU32(u32 value, u32 chunkSize)
+{
+	if (chunkSize <= 1) { return value; } //eat degenerate and invalid
+	if ((value % chunkSize) == 0) { return value; } //totally valid scenario
+	return value + (chunkSize - (value % chunkSize)); //the real calculation
+}
+inline u64 RoundUpToU64(u64 value, u64 chunkSize)
+{
+	if (chunkSize <= 1) { return value; } //eat degenerate and invalid
+	if ((value % chunkSize) == 0) { return value; } //totally valid scenario
+	return value + (chunkSize - (value % chunkSize)); //the real calculation
+}
+
+// +==============================+
 // |            Floor             |
 // +==============================+
 inline r32 FloorR32(r32 value)

@@ -2,6 +2,7 @@
 File:   memory_arena.h
 Author: Taylor Robbins
 Date:   11\26\2022
+This is #included by common.h
 */
 
 #ifndef _MEMORY_ARENA_H
