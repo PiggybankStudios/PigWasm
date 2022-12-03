@@ -56,13 +56,18 @@ function wasmPntrToJsString(ptr)
 	return String.fromCharCode(...codes);
 }
 
-function jsStringToWasmPntr(jsString, arenaName)
+function jsStringToWasmPntr(arenaName, jsString)
 {
 	let allocSize = jsString.length+1;
-	let result = wasmModule.exports.AllocateMemory(allocSize, arenaName);
+	let result = wasmModule.exports.AllocateMemory(arenaName, allocSize);
 	writeToWasmCharBuffer(allocSize, result, jsString);
 	WritePntr_U8(result + (allocSize-1), 0x00);
 	return result;
+}
+
+function freeWasmString(arenaName, stringPntr, stringLength)
+{
+	wasmModule.exports.FreeMemory(arenaName, stringPntr, stringLength+1);
 }
 
 // +--------------------------------------------------------------+

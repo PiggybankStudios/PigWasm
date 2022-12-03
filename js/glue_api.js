@@ -95,7 +95,7 @@ function RequestFileAsync(requestId, filePathPntr)
 	{
 		console.log(resultBuffer);
 		let bufferU8 = new Uint8Array(resultBuffer);
-		let spacePntr = wasmModule.exports.AllocateMemory(resultBuffer.byteLength, ArenaName_MainHeap);
+		let spacePntr = wasmModule.exports.AllocateMemory(ArenaName_MainHeap, resultBuffer.byteLength);
 		// console.log("Allocated at " + spacePntr);
 		let buf = new Uint8Array(wasmMemory.buffer);
 		for (let bIndex = 0; bIndex < resultBuffer.byteLength; bIndex++)
@@ -103,12 +103,13 @@ function RequestFileAsync(requestId, filePathPntr)
 			buf[spacePntr + bIndex] = bufferU8[bIndex];
 		}
 		wasmModule.exports.HandleFileReady(requestId, resultBuffer.byteLength, spacePntr);
+		wasmModule.exports.FreeMemory(ArenaName_MainHeap, spacePntr, resultBuffer.byteLength);
 	});
 }
 
 function TestFunction()
 {
-	return jsStringToWasmPntr("Hello from Javascript!", ArenaName_MainHeap);
+	return jsStringToWasmPntr(ArenaName_MainHeap, "Hello from Javascript!");
 }
 
 apiFuncs_custom = {

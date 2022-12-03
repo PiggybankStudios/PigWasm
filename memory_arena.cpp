@@ -730,7 +730,7 @@ void* AllocMem(MemArena_t* arena, u64 numBytes, AllocAlignment_t alignOverride)
 			if (currentHeapHeadAddress + numBytes > currentWasmPageCount * WASM_MEM_PAGE_SIZE)
 			{
 				u32 numPagesNeeded = CeilDivU32(currentHeapHeadAddress + numBytes, WASM_MEM_PAGE_SIZE) - currentWasmPageCount;
-				if (PRINT_WASM_PAGE_EXPANSIONS || IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("Expending WASM memory by %u pages", numPagesNeeded); }
+				if (PRINT_WASM_PAGE_EXPANSIONS || IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("Expending WASM memory by %u pages (%u total)", numPagesNeeded, currentWasmPageCount + numPagesNeeded); }
 				RequestMoreMemoryPages(numPagesNeeded);
 				currentWasmPageCount += numPagesNeeded;
 				arena->size += (numPagesNeeded * WASM_MEM_PAGE_SIZE);
