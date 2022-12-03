@@ -25,7 +25,9 @@ async function initialize()
 		...apiFuncs_opengl,
 	};
 	
+	// console.log("Before loading wasm module we have " + wasmMemory.buffer.byteLength);
 	wasmModule = await loadWasmModule(WASM_FILE_PATH, wasmEnvironment);
+	// console.log("After loading wasm module we now have " + wasmMemory.buffer.byteLength);
 	// console.log("WasmModule:", wasmModule);
 	
 	let initializeTimestamp = Math.floor(Date.now() / 1000); //TODO: Should we be worried about this being a 32-bit float?

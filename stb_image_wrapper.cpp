@@ -21,7 +21,7 @@ void StbImageFree(void* pntr)
 }
 void* StbImageRealloc(void* pntr, size_t newSize)
 {
-	return ReallocMem(mainHeap, pntr, (u64)newSize);
+	return ReallocMem(mainHeap, pntr, (u64)newSize, 0, AllocAlignment_None, true);
 }
 
 #define STB_IMAGE_IMPLEMENTATION

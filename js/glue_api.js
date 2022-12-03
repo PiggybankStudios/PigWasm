@@ -37,7 +37,7 @@ apiFuncs_intrinsics = {
 // +--------------------------------------------------------------+
 function RequestMoreMemoryPages(numPages)
 {
-	console.log("Memory growing by " + numPages + " pages");
+	// console.log("Memory growing by " + numPages + " pages");
 	wasmMemory.grow(numPages);
 }
 

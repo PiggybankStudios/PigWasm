@@ -63,8 +63,10 @@ void InitializeMemory(u32 startingWasmPageCount)
 	tempArena = &tempArenaNonPointer;
 	
 	InitMemArena_StdHeap(wasmMemory);
+	// FlagSet(wasmMemory->flags, MemArenaFlag_DebugOutput);
 	InitMemArena_PagedHeapArena(mainHeap, MAIN_HEAP_PAGE_SIZE, wasmMemory);
 	FlagUnset(mainHeap->flags, MemArenaFlag_AutoFreePages);
+	FlagSet(mainHeap->flags, MemArenaFlag_DebugOutput);
 	InitMemArena_Alias(mainHeapDebug, mainHeap);
 	FlagSet(mainHeapDebug->flags, MemArenaFlag_DebugOutput);
 	void* tempArenaSpace = AllocMem(wasmMemory, TEMP_ARENA_SIZE);
