@@ -70,9 +70,9 @@ function DebugOutput(level, messagePtr)
 
 function GetCanvasSize(widthOutPntr, heightOutPntr)
 {
-	let pixelRatio = window.devicePixelRatio;
-	let canvasWidth = canvas.width / pixelRatio;
-	let canvasHeight = canvas.height / pixelRatio;
+	// let pixelRatio = window.devicePixelRatio;
+	let canvasWidth = canvas.width;// / pixelRatio;
+	let canvasHeight = canvas.height;// / pixelRatio;
 	// console.log("Canvas size: " + canvasWidth + "x" + canvasHeight + " (ratio " + pixelRatio + ")");
 	WritePntr_R32(widthOutPntr, canvasWidth);
 	WritePntr_R32(heightOutPntr, canvasHeight);
