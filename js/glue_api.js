@@ -10,6 +10,10 @@ function js_cosf(value)
 {
 	return Math.cos(value);
 }
+function js_round(value)
+{
+	return Math.round(value);
+}
 function js_roundf(value)
 {
 	return Math.round(value);
@@ -27,6 +31,7 @@ function js_pow(base, exponent)
 apiFuncs_intrinsics = {
 	sinf:   js_sinf,
 	cosf:   js_cosf,
+	round:  js_round,
 	roundf: js_roundf,
 	ldexp:  js_ldexp,
 	pow:    js_pow,
@@ -117,6 +122,12 @@ function RequestFileAsync(requestId, filePathPntr)
 	});
 }
 
+//Returns num microseconds since program start (rounded and cast to BigInt)
+function GetPerfTime()
+{
+	return BigInt(Math.round(window.performance.now() * 1000));
+}
+
 function TestFunction()
 {
 	return jsStringToWasmPntr(ArenaName_MainHeap, "Hello from Javascript!");
@@ -129,6 +140,7 @@ apiFuncs_custom = {
 	GetCanvasSize: GetCanvasSize,
 	GetMousePosition: GetMousePosition,
 	RequestFileAsync: RequestFileAsync,
+	GetPerfTime: GetPerfTime,
 	TestFunction: TestFunction,
 };
 

@@ -10,6 +10,20 @@ This is #included by common.h
 
 #define GLUE_FUNC extern "C"
 
+typedef u64 PerfTime_t;
+
+r64 GetPerfTimeDiffMs(PerfTime_t start, PerfTime_t end)
+{
+	if (end >= start)
+	{
+		return (r64)(end - start) / 1000.0;
+	}
+	else
+	{
+		return -((r64)(start - end) / 1000.0);
+	}
+}
+
 // +--------------------------------------------------------------+
 // |                       Custom Functions                       |
 // +--------------------------------------------------------------+
@@ -19,6 +33,7 @@ GLUE_FUNC void DebugOutput(int level, const char* message);
 GLUE_FUNC void GetCanvasSize(r32* widthOut, r32* heightOut);
 GLUE_FUNC void GetMousePosition(r32* xPosOut, r32* yPosOut);
 GLUE_FUNC void RequestFileAsync(u32 requestId, const char* filePath);
+GLUE_FUNC PerfTime_t GetPerfTime();
 GLUE_FUNC const char* TestFunction();
 
 // +--------------------------------------------------------------+

@@ -2,19 +2,16 @@
 async function initialize()
 {
 	canvas = document.getElementsByTagName("canvas")[0];
-	console.log(canvas);
-	
-	var desiredWidthInCSSPixels = 640;
-	var desiredHeightInCSSPixels = 480;
+	// console.log(canvas);
 	
 	// set the display size of the canvas.
-	canvas.style.width = desiredWidthInCSSPixels + "px";
-	canvas.style.height = desiredHeightInCSSPixels + "px";
+	canvas.style.width = DesiredCanvasWidth + "px";
+	canvas.style.height = DesiredCanvasHeight + "px";
 	
 	// set the size of the drawingBuffer
 	var devicePixelRatio = window.devicePixelRatio || 1;
-	canvas.width = desiredWidthInCSSPixels * devicePixelRatio;
-	canvas.height = desiredHeightInCSSPixels * devicePixelRatio;
+	canvas.width = DesiredCanvasWidth * devicePixelRatio;
+	canvas.height = DesiredCanvasHeight * devicePixelRatio;
 	
 	// canvasContainer = document.getElementById("canvas_container");
 	// console.assert(canvasContainer != null, "Couldn't find canvas container DOM element!");
