@@ -281,8 +281,8 @@ extern Keyboard_t* keyboard;
 // +--------------------------------------------------------------+
 // |                          Functions                           |
 // +--------------------------------------------------------------+
-void InitMouse(Mouse_t* mouse);
-void InitKeyboard(Keyboard_t* keyboard);
+void InitMouse(Mouse_t* mousePntr);
+void InitKeyboard(Keyboard_t* keyboardPntr);
 
 void MouseHandleBtnStateChange(Mouse_t* mouse, MouseBtn_t btn, bool isDown);
 void KeyboardHandleKeyStateChange(Keyboard_t* keyboard, Key_t key, bool isDown);

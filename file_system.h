@@ -7,6 +7,8 @@ Date:   12\01\2022
 #ifndef _FILE_SYSTEM_H
 #define _FILE_SYSTEM_H
 
+#include "var_array.h"
+
 // +--------------------------------------------------------------+
 // |                          Structures                          |
 // +--------------------------------------------------------------+
@@ -28,13 +30,18 @@ struct FileSystemManager_t
 };
 
 // +--------------------------------------------------------------+
+// |                           Globals                            |
+// +--------------------------------------------------------------+
+extern FileSystemManager_t* fileSystem;
+
+// +--------------------------------------------------------------+
 // |                          Functions                           |
 // +--------------------------------------------------------------+
 void FreeFileRequest(FileRequest_t* request);
-void InitializeFileSystemManager(FileSystemManager_t* manager);
-FileRequest_t* GetFileRequestById(FileSystemManager_t* manager, u32 requestId, u32* requestIndexOut = nullptr);
-void FileSystemHandleFileReady(FileSystemManager_t* manager, u32 requestId, u32 fileSize, const void* fileData);
+void InitializeFileSystemManager(FileSystemManager_t* fileSystemManagerPntr);
+FileRequest_t* GetFileRequestById(u32 requestId, u32* requestIndexOut = nullptr);
+void FileSystemHandleFileReady(u32 requestId, u32 fileSize, const void* fileData);
 
-void FileSystemRequestAsync(FileSystemManager_t* manager, MyStr_t filePath, FileReadyCallback_f* callback, void* callbackContext = nullptr);
+void FileSystemRequestAsync(MyStr_t filePath, FileReadyCallback_f* callback, void* callbackContext = nullptr);
 
 #endif //  _FILE_SYSTEM_H

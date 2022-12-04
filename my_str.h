@@ -64,6 +64,7 @@ i32 StrCompareIgnoreCase(MyStr_t left, const char* rightNt);
 // If the path is actually a directory only we may interpret the last folder name as fileName w/ extension.
 // Only use full file paths in order to avoid this, or have trailing "/"
 void SplitFilePath(MyStr_t fullPath, MyStr_t* directoryOut, MyStr_t* fileNameOut, MyStr_t* extensionOut = nullptr);
+bool FindSubstring(MyStr_t target, MyStr_t substring, u32* indexOut = nullptr, u32 startIndex = 0);
 
 // +--------------------------------------------------------------+
 // |                       Inline Functions                       |

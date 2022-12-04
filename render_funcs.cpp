@@ -35,6 +35,10 @@ void InitializeRenderContext()
 	squareVertices[5].position = NewVec2(0, 1); squareVertices[5].color = NewVec4(1, 1, 1, 1); squareVertices[5].texCoord = NewVec2(0, 1);
 	CreateVertBuffer(&rc->squareBuffer, false, sizeof(Vertex2D_t), ArrayCount(squareVertices), &squareVertices[0]);
 	
+	u32 dotTexturePixels[1];
+	dotTexturePixels[0] = White_Value;
+	CreateTexture(&rc->dotTexture, NewVec2i(1, 1), &dotTexturePixels[0], true, true);
+	
 	CreateVertArrayObj(&rc->basicVao, false, VertexAttribute_Position|VertexAttribute_Color|VertexAttribute_TexCoord);
 }
 
@@ -52,6 +56,26 @@ void RcBindVertArrayObj(VertArrayObj_t* vao)
 {
 	BindVertArrayObj(vao);
 	rc->boundVao = vao;
+}
+void RcBindTexture1(Texture_t* texture)
+{
+	if (texture == nullptr)
+	{
+		BindTexture1(rc->boundShader, &rc->dotTexture);
+		RcSetSourceRec1(NewVec2(0, 0), NewVec2((r32)rc->dotTexture.size.x, (r32)rc->dotTexture.size.y));
+		rc->boundTexture1 = nullptr;
+	}
+	else
+	{
+		BindTexture1(rc->boundShader, texture);
+		RcSetSourceRec1(NewVec2(0, 0), NewVec2((r32)texture->size.x, (r32)texture->size.y));
+		rc->boundTexture1 = texture;
+	}
+}
+
+void RcSetSourceRec1(v2 topLeft, v2 size)
+{
+	glUniform4f(rc->boundShader->uniformLocations[ShaderUniform_SourceRec1], topLeft.x, topLeft.y, size.x, size.y);
 }
 
 void RcSetColor(Color_t color)

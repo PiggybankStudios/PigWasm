@@ -56,6 +56,16 @@ inline v4 ToVec4(Color_t color)
 	return result;
 }
 
+inline Color_t ColorLighten(Color_t color, u8 amount)
+{
+	Color_t result;
+	result.r = (u8)MinU32(255, color.r + amount);
+	result.g = (u8)MinU32(255, color.g + amount);
+	result.b = (u8)MinU32(255, color.b + amount);
+	result.a = color.a;
+	return result;
+}
+
 // +--------------------------------------------------------------+
 // |                      Predefined Colors                       |
 // +--------------------------------------------------------------+

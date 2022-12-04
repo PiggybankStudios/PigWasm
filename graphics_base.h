@@ -10,6 +10,11 @@ Date:   11\23\2022
 #define _GRAPHICS_BASE_H
 
 // +--------------------------------------------------------------+
+// |                           Defines                            |
+// +--------------------------------------------------------------+
+#define FRAGMENT_VERTEX_DIVIDER_STR "FRAGMENT_SHADER"
+
+// +--------------------------------------------------------------+
 // |                          Structures                          |
 // +--------------------------------------------------------------+
 struct Vertex2D_t
@@ -84,6 +89,7 @@ inline const char* GetShaderUniformGlslName(ShaderUniform_t uniform)
 
 struct Shader_t
 {
+	bool isValid;
 	GLuint vertId;
 	GLuint fragId;
 	GLuint glId;
@@ -107,12 +113,62 @@ struct VertArrayObj_t
 	u8 attributes;
 };
 
+struct Texture_t
+{
+	bool isValid;
+	GLuint glId;
+	v2i size;
+};
+
+struct ShaderLoadContext_t
+{
+	bool filled;
+	Shader_t* targetShader;
+};
+
+struct TextureLoadContext_t
+{
+	bool filled;
+	Texture_t* targetTexture;
+	bool pixelated;
+	bool wrapping;
+};
+
+#define MAX_NUM_CONCURRENT_SHADER_LOADS 16
+#define MAX_NUM_CONCURRENT_TEXTURE_LOADS 16
+
+struct FileLoadingManager_t
+{
+	ShaderLoadContext_t shaderLoadContexts[MAX_NUM_CONCURRENT_SHADER_LOADS];
+	TextureLoadContext_t textureLoadContexts[MAX_NUM_CONCURRENT_TEXTURE_LOADS];
+};
+
+// +--------------------------------------------------------------+
+// |                           Globals                            |
+// +--------------------------------------------------------------+
+extern FileLoadingManager_t* fileLoadingManager;
+
+// +--------------------------------------------------------------+
+// |                        Init and Free                         |
+// +--------------------------------------------------------------+
+void InitFileLoadingManager(FileLoadingManager_t* manager);
+
 // +--------------------------------------------------------------+
 // |                            Create                            |
 // +--------------------------------------------------------------+
-void CreateShader(Shader_t* shaderOut, const char* vertSource, const char* fragSource);
+void CreateShader(Shader_t* shaderOut, MyStr_t vertSource, MyStr_t fragSource);
+void CreateShaderFromSingleStr(Shader_t* shaderOut, MyStr_t shaderSourceFileStr);
 void CreateVertBuffer(VertBuffer_t* bufferOut, bool dynamic, u32 vertexSize, u32 numVertices, const void* verticesPntr);
 void CreateVertArrayObj(VertArrayObj_t* vaoOut, bool is3d, u8 attributes);
+void CreateTexture(Texture_t* textureOut, v2i size, const u32* pixels, bool pixelated, bool wrapping);
+bool CreateTextureFromPngFile(Texture_t* textureOut, u32 fileSize, const void* filePntr, bool pixelated, bool wrapping);
+
+// +--------------------------------------------------------------+
+// |                          StartLoad                           |
+// +--------------------------------------------------------------+
+//TODO: Add some sort of async failed callback or something for these
+bool StartLoadShader(Shader_t* targetShader, MyStr_t filePath);
+bool StartLoadTexture(Texture_t* targetTexture, MyStr_t filePath, bool pixelated, bool wrapping);
 
 // +--------------------------------------------------------------+
 // |                             Bind                             |
@@ -120,5 +176,6 @@ void CreateVertArrayObj(VertArrayObj_t* vaoOut, bool is3d, u8 attributes);
 void BindShader(Shader_t* shader);
 void BindVertBuffer(VertBuffer_t* buffer);
 void BindVertArrayObj(VertArrayObj_t* vao);
+void BindTexture1(Texture_t* texture);
 
 #endif //  _GRAPHICS_BASE_H

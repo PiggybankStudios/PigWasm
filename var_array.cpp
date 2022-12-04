@@ -101,7 +101,17 @@ bool VarArrayExpand(VarArray_t* array, u32 capacityRequired)
 	Assert(newLength >= capacityRequired);
 	Assert(newLength <= (UINT32_MAX / array->itemSize)); //u32 overflow would be weird
 	
-	void* newSpace = AllocMem(array->allocArena, newLength * array->itemSize);
+	#if 1
+	if (array->items != nullptr)
+	{
+		array->items = ReallocMem(array->allocArena, array->items, (u64)(newLength * array->itemSize), (u64)(array->allocLength * array->itemSize));
+	}
+	else
+	{
+		array->items = AllocMem(array->allocArena, (u64)(newLength * array->itemSize));
+	}
+	#else
+	void* newSpace = AllocMem(array->allocArena, (u64)(newLength * array->itemSize));
 	if (newSpace == nullptr)
 	{
 		PrintLine_E("Failed to expand variable array %s to %u items at %u bytes each", (array->name.pntr != nullptr) ? array->name.pntr : "[unnamed]", newLength, array->itemSize);
@@ -115,10 +125,12 @@ bool VarArrayExpand(VarArray_t* array, u32 capacityRequired)
 	}
 	if (array->items != nullptr)
 	{
-		FreeMem(array->allocArena, array->items, array->allocLength * array->itemSize);
+		FreeMem(array->allocArena, array->items, (u64)(array->allocLength * array->itemSize));
 	}
 	
 	array->items = newSpace;
+	#endif
+	
 	array->allocLength = newLength;
 	array->wasExpanded = true;
 	IncrementU32(array->numExpansions);

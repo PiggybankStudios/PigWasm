@@ -87,13 +87,13 @@ function GetMousePosition(xPosOutPntr, yPosOutPntr)
 function RequestFileAsync(requestId, filePathPntr)
 {
 	let filePath = wasmPntrToJsString(filePathPntr);
-	console.log("RequestFileAsync(" + requestId + ", " + filePath + ")");
+	// console.log("RequestFileAsync(" + requestId + ", " + filePath + ")");
 	fetch("http://localhost:8000/" + filePath, { cache: "no-cache" })
 	.then(data => data.blob())
 	.then(blob => blob.arrayBuffer())
 	.then(resultBuffer =>
 	{
-		console.log(resultBuffer);
+		// console.log(resultBuffer);
 		let bufferU8 = new Uint8Array(resultBuffer);
 		let spacePntr = wasmModule.exports.AllocateMemory(ArenaName_MainHeap, resultBuffer.byteLength);
 		// console.log("Allocated at " + spacePntr);
@@ -204,27 +204,19 @@ function glDisable(cap)
 }
 function glBlendFunc(sfactor, dfactor)
 {
-	console.error("glBlendFunc is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.blendFunc(sfactor, dfactor);
 }
 function glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha)
 {
-	console.error("glBlendFuncSeparate is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.blendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
 }
 function glDepthFunc(func)
 {
-	console.error("glDepthFunc is unimplemented!"); //TODO: Implement me!
-}
-function glAlphaFunc(func, ref)
-{
-	console.error("glAlphaFunc is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.depthFunc(func);
 }
 function glFrontFace(mode)
 {
-	console.error("glFrontFace is unimplemented!"); //TODO: Implement me!
-}
-function glLineWidth(width)
-{
-	console.error("glLineWidth is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.frontFace(mode);
 }
 function glGenFramebuffer()
 {
@@ -239,7 +231,10 @@ function glGenVertexArray()
 }
 function glGenTexture()
 {
-	console.error("glGenTexture is unimplemented!"); //TODO: Implement me!
+	let texture = canvasContextGl.createTexture();
+	let textureId = webglObjects.textures.length;
+	webglObjects.textures.push(texture);
+	return textureId;
 }
 function glGenBuffer()
 {
@@ -268,7 +263,9 @@ function glDeleteFramebuffer(frameBufferId)
 }
 function glDeleteTexture(textureId)
 {
-	console.error("glDeleteTexture is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyTextureId(textureId), "glDeleteTexture", "textureId", textureId)) { return; }
+	canvasContextGl.deleteTexture(webglObjects.textures[textureId]);
+	webglObjects.textures[textureId] = null;
 }
 function glDeleteShader(shaderId)
 {
@@ -297,9 +294,10 @@ function glBindVertexArray(vaoId)
 	if (!verifyParameter(verifyVertArrayId(vaoId), "glBindVertexArray", "vaoId", vaoId)) { return; }
 	canvasContextGl.bindVertexArray(webglObjects.vertArrays[vaoId]);
 }
-function glBindTexture(target, texture)
+function glBindTexture(target, textureId)
 {
-	console.error("glBindTexture is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyTextureId(textureId), "glBindTexture", "textureId", textureId)) { return; }
+	canvasContextGl.bindTexture(target, webglObjects.textures[textureId]);
 }
 function glBindBuffer(target, bufferId)
 {
@@ -315,14 +313,17 @@ function glTexImage2DMultisample(target, samples, internalformat, width, height,
 {
 	console.error("glTexImage2DMultisample is unimplemented!"); //TODO: Implement me!
 }
-function glTexImage2D(target, level, internalformat, width, height, border, format, type, data)
+function glTexImage2D(target, level, internalformat, width, height, border, format, type, dataPntr)
 {
-	console.error("glTexImage2D is unimplemented!"); //TODO: Implement me!
+	//TODO: Do we need a size for Uint8Array
+	let dataBuffer = new Uint8Array(wasmMemory.buffer, dataPntr);
+	canvasContextGl.texImage2D(target, level, internalformat, width, height, border, format, type, dataBuffer);
 }
 function glTexParameteri(target, pname, param)
 {
-	console.error("glTexParameteri is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.texParameteri(target, pname, param);
 }
+//TODO: Do we actually need this implemented?
 function glTexParameteriv(target, pname, params)
 {
 	console.error("glTexParameteriv is unimplemented!"); //TODO: Implement me!
@@ -331,9 +332,9 @@ function glEnableVertexAttribArray(index)
 {
 	canvasContextGl.enableVertexAttribArray(index);
 }
-function glActiveTexture(texture)
+function glActiveTexture(textureIndex)
 {
-	console.error("glActiveTexture is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.activeTexture(textureIndex);
 }
 function glVertexAttribPointer(index, size, type, normalized, stride, pointer)
 {
@@ -363,7 +364,7 @@ function glLinkProgram(programId)
 }
 function glGenerateMipmap(target)
 {
-	console.error("glGenerateMipmap is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.generateMipmap(target);
 }
 function glBufferData(target, size, dataPntr, usage)
 {

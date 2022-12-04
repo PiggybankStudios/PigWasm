@@ -45,7 +45,6 @@ async function initialize()
 	});
 	window.addEventListener("mousedown", function(event)
 	{
-		console.log(event);
 		let mouseBtn = MouseDownEventNumToBtnEnum(event.button);
 		wasmModule.exports.HandleMousePressOrRelease(mouseBtn, true);
 	});

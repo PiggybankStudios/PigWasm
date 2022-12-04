@@ -22,18 +22,20 @@ Keyboard_t* keyboard = nullptr;
 // +--------------------------------------------------------------+
 // |                          Initialize                          |
 // +--------------------------------------------------------------+
-void InitMouse(Mouse_t* mouse)
+void InitMouse(Mouse_t* mousePntr)
 {
-	NotNull(mouse);
+	NotNull(mousePntr);
+	mouse = mousePntr;
 	ClearPointer(mouse);
 	for (u32 bIndex = 0; bIndex < MouseBtn_NumBtns; bIndex++)
 	{
 		mouse->buttons[bIndex].btn = (MouseBtn_t)bIndex;
 	}
 }
-void InitKeyboard(Keyboard_t* keyboard)
+void InitKeyboard(Keyboard_t* keyboardPntr)
 {
-	NotNull(keyboard);
+	NotNull(keyboardPntr);
+	keyboard = keyboardPntr;
 	ClearPointer(keyboard);
 	for (u32 keyIndex = 0; keyIndex < Key_NumKeys; keyIndex++)
 	{

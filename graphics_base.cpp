@@ -12,13 +12,94 @@ Description:
 #include "vectors.h"
 #include "debug.h"
 #include "stb/stb_image.h"
+#include "file_system.h"
+#include "memory.h"
 
 static GLchar parseLogBuffer[1024];
+
+
+// +--------------------------------------------------------------+
+// |                           Globals                            |
+// +--------------------------------------------------------------+
+FileLoadingManager_t* fileLoadingManager = nullptr;
+
+// +--------------------------------------------------------------+
+// |                      Private Functions                       |
+// +--------------------------------------------------------------+
+static ShaderLoadContext_t* NewShaderLoadContext(Shader_t* targetShader)
+{
+	for (u64 cIndex = 0; cIndex < MAX_NUM_CONCURRENT_SHADER_LOADS; cIndex++)
+	{
+		if (!fileLoadingManager->shaderLoadContexts[cIndex].filled)
+		{
+			ShaderLoadContext_t* context = &fileLoadingManager->shaderLoadContexts[cIndex];
+			ClearPointer(context);
+			context->filled = true;
+			context->targetShader = targetShader;
+			return context;
+		}
+	}
+	return nullptr;
+}
+
+static TextureLoadContext_t* NewTextureLoadContext(Texture_t* targetTexture, bool pixelated, bool wrapping)
+{
+	for (u64 cIndex = 0; cIndex < MAX_NUM_CONCURRENT_TEXTURE_LOADS; cIndex++)
+	{
+		if (!fileLoadingManager->textureLoadContexts[cIndex].filled)
+		{
+			TextureLoadContext_t* context = &fileLoadingManager->textureLoadContexts[cIndex];
+			ClearPointer(context);
+			context->filled = true;
+			context->targetTexture = targetTexture;
+			context->pixelated = pixelated;
+			context->wrapping = wrapping;
+			return context;
+		}
+	}
+	return nullptr;
+}
+
+static void FileLoadingManagerShaderFileReadyCallback(MyStr_t filePath, u32 fileSize, const void* fileData, void* contextPntr)
+{
+	ShaderLoadContext_t* context = (ShaderLoadContext_t*)contextPntr;
+	NotNull2(context, context->targetShader);
+	Assert(context->filled == true);
+	CreateShaderFromSingleStr(context->targetShader, NewStr(fileSize, (char*)fileData));
+	WriteLine_D("Successfully loaded shader");
+	context->filled = false;
+}
+
+static void FileLoadingManagerTextureFileReadyCallback(MyStr_t filePath, u32 fileSize, const void* fileData, void* contextPntr)
+{
+	TextureLoadContext_t* context = (TextureLoadContext_t*)contextPntr;
+	NotNull2(context, context->targetTexture);
+	Assert(context->filled == true);
+	if (CreateTextureFromPngFile(context->targetTexture, fileSize, fileData, context->pixelated, context->wrapping))
+	{
+		PrintLine_D("Successfully loaded texture (%dx%d)", context->targetTexture->size.x, context->targetTexture->size.y);
+	}
+	else
+	{
+		PrintLine_D("Failed to parse texture (%u bytes at \"%.*s\")", fileSize, filePath.length, filePath.pntr);
+	}
+	context->filled = false;
+}
+
+// +--------------------------------------------------------------+
+// |                        Init and Free                         |
+// +--------------------------------------------------------------+
+void InitFileLoadingManager(FileLoadingManager_t* fileLoadingManagerPntr)
+{
+	NotNull(fileLoadingManagerPntr);
+	fileLoadingManager = fileLoadingManagerPntr;
+	ClearPointer(fileLoadingManager);
+}
 
 // +--------------------------------------------------------------+
 // |                            Create                            |
 // +--------------------------------------------------------------+
-void CreateShader(Shader_t* shaderOut, const char* vertSource, const char* fragSource)
+void CreateShader(Shader_t* shaderOut, MyStr_t vertSource, MyStr_t fragSource)
 {
 	GLsizei parseLogLength = 0;
 	GLint linkStatus = 0;
@@ -29,7 +110,11 @@ void CreateShader(Shader_t* shaderOut, const char* vertSource, const char* fragS
 	shaderOut->glId = glCreateProgram();
 	// PrintLine_D("vert %d frag %d program %d", shaderOut->vertId, shaderOut->fragId, shaderOut->glId);
 	
-	glShaderSource(shaderOut->vertId, vertSource);
+	PushMemMark(tempArena);
+	MyStr_t nullTermedVertSource = AllocString(tempArena, &vertSource);
+	MyStr_t nullTermedFragSource = AllocString(tempArena, &fragSource);
+	
+	glShaderSource(shaderOut->vertId, nullTermedVertSource.chars);
 	glCompileShader(shaderOut->vertId);
 	glGetShaderInfoLog(shaderOut->vertId, ArrayCount(parseLogBuffer), &parseLogLength, &parseLogBuffer[0]);
 	if (parseLogLength > 0)
@@ -37,7 +122,7 @@ void CreateShader(Shader_t* shaderOut, const char* vertSource, const char* fragS
 		PrintLine_W("Vertex shader compilation had %d char log:\n%s", parseLogLength, &parseLogBuffer[0]);
 	}
 	
-	glShaderSource(shaderOut->fragId, fragSource);
+	glShaderSource(shaderOut->fragId, nullTermedFragSource.chars);
 	glCompileShader(shaderOut->fragId);
 	glGetShaderInfoLog(shaderOut->fragId, ArrayCount(parseLogBuffer), &parseLogLength, &parseLogBuffer[0]);
 	if (parseLogLength > 0)
@@ -77,6 +162,27 @@ void CreateShader(Shader_t* shaderOut, const char* vertSource, const char* fragS
 		GLint uniformLocation = glGetUniformLocation(shaderOut->glId, uniformName);
 		shaderOut->uniformLocations[uIndex] = uniformLocation;
 	}
+	
+	PopMemMark(tempArena);
+	shaderOut->isValid = true;
+}
+
+void CreateShaderFromSingleStr(Shader_t* shaderOut, MyStr_t shaderSourceFileStr)
+{
+	u32 dividerIndex = 0;
+	bool foundDivider = FindSubstring(shaderSourceFileStr, NewStr(FRAGMENT_VERTEX_DIVIDER_STR), &dividerIndex);
+	if (!foundDivider)
+	{
+		WriteLine_E("Failed to find fragment/vertex divider string in shader file source code!");
+		return;
+	}
+	
+	u32 prevNewLineIndex = dividerIndex;
+	while (prevNewLineIndex > 0 && shaderSourceFileStr.chars[prevNewLineIndex-1] != '\n') { prevNewLineIndex--; }
+	u32 nextNewLineIndex = dividerIndex;
+	while (nextNewLineIndex < shaderSourceFileStr.length && shaderSourceFileStr.chars[nextNewLineIndex] != '\n') { nextNewLineIndex++; }
+	
+	CreateShader(shaderOut, StrSubstring(&shaderSourceFileStr, 0, prevNewLineIndex), StrSubstring(&shaderSourceFileStr, nextNewLineIndex+1));
 }
 
 void CreateVertBuffer(VertBuffer_t* bufferOut, bool dynamic, u32 vertexSize, u32 numVertices, const void* verticesPntr)
@@ -93,6 +199,80 @@ void CreateVertArrayObj(VertArrayObj_t* vaoOut, bool is3d, u8 attributes)
 	vaoOut->glId = glGenVertexArray();
 	vaoOut->is3d = is3d;
 	vaoOut->attributes = attributes;
+}
+
+void CreateTexture(Texture_t* textureOut, v2i size, const u32* pixels, bool pixelated, bool wrapping)
+{
+	NotNull2(textureOut, pixels);
+	
+	ClearPointer(textureOut);
+	textureOut->glId = glGenTexture();
+	textureOut->size = size;
+	glBindTexture(GL_TEXTURE_2D, textureOut->glId);
+	glTexImage2D(
+		GL_TEXTURE_2D,    //bound texture type
+		0,                //image level
+		GL_RGBA,          //internal format
+		size.x,           //image width
+		size.y,           //image height
+		0,                //border
+		GL_RGBA,          //format
+		GL_UNSIGNED_BYTE, //type
+		pixels            //data
+	);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (pixelated ? GL_NEAREST_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (pixelated ? GL_NEAREST : GL_LINEAR));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     (wrapping ? GL_REPEAT : GL_CLAMP_TO_EDGE));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     (wrapping ? GL_REPEAT : GL_CLAMP_TO_EDGE));
+	glGenerateMipmap(GL_TEXTURE_2D);
+	textureOut->isValid = true;
+}
+
+bool CreateTextureFromPngFile(Texture_t* textureOut, u32 fileSize, const void* filePntr, bool pixelated, bool wrapping)
+{
+	int stbNumChannels;
+	int stbWidth, stbHeight;
+	u8* stbPixelData = stbi_load_from_memory(
+		(const u8*)filePntr, (int)fileSize,
+		&stbWidth, &stbHeight,
+		&stbNumChannels,
+		sizeof(u32)
+	);
+	UNUSED(stbNumChannels);
+	if (stbPixelData == nullptr)
+	{
+		PrintLine_E("Failed to parse image: %s", stbi_failure_reason());
+		//TODO: DestroyTexture?
+		return false;
+	}
+	Assert(stbWidth > 0 && stbHeight > 0);
+	
+	v2i textureSize = NewVec2i(stbWidth, stbHeight);
+	CreateTexture(textureOut, textureSize, (const u32*)stbPixelData, pixelated, wrapping);
+	
+	stbi_image_free(stbPixelData);
+	
+	return true;
+}
+
+// +--------------------------------------------------------------+
+// |                          StartLoad                           |
+// +--------------------------------------------------------------+
+bool StartLoadShader(Shader_t* targetShader, MyStr_t filePath)
+{
+	ShaderLoadContext_t* shaderLoadContext = NewShaderLoadContext(targetShader);
+	if (shaderLoadContext == nullptr) { return false; }
+	
+	FileSystemRequestAsync(filePath, FileLoadingManagerShaderFileReadyCallback, shaderLoadContext);
+	return true;
+}
+bool StartLoadTexture(Texture_t* targetTexture, MyStr_t filePath, bool pixelated, bool wrapping)
+{
+	TextureLoadContext_t* textureLoadContext = NewTextureLoadContext(targetTexture, pixelated, wrapping);
+	if (textureLoadContext == nullptr) { return false; }
+	
+	FileSystemRequestAsync(filePath, FileLoadingManagerTextureFileReadyCallback, textureLoadContext);
+	return true;
 }
 
 // +--------------------------------------------------------------+
@@ -162,4 +342,13 @@ void BindVertArrayObj(VertArrayObj_t* vao)
 			attributeIndex++;
 		}
 	}
+}
+void BindTexture1(Shader_t* boundShader, Texture_t* texture)
+{
+	NotNull(boundShader);
+	NotNull(texture);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture->glId);
+	glUniform1i(boundShader->uniformLocations[ShaderUniform_Texture1], 0);
+	glUniform2f(boundShader->uniformLocations[ShaderUniform_Texture1Size], texture->size.x, texture->size.y);
 }

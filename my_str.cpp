@@ -169,3 +169,42 @@ void SplitFilePath(MyStr_t fullPath, MyStr_t* directoryOut, MyStr_t* fileNameOut
 		}
 	}
 }
+
+//TODO: This should return true if target and substring are equal!
+bool FindSubstring(MyStr_t target, MyStr_t substring, u32* indexOut, u32 startIndex)
+{
+	NotNullStr(&target);
+	NotNullStr(&substring);
+	if (substring.length > target.length) { return false; }
+	
+	for (u32 cIndex = startIndex; cIndex + substring.length <= target.length; )
+	{
+		bool allMatched = true;
+		u32 cSubIndex = 0;
+		for (u32 subIndex = 0; subIndex < substring.length; )
+		{
+			u32 targetCodepoint = CharToU32(target.chars[cIndex + cSubIndex]);
+			u32 subCodepoint = CharToU32(substring.chars[subIndex]);
+			
+			if (targetCodepoint != subCodepoint)
+			{
+				allMatched = false;
+				break;
+			}
+			
+			subIndex++;
+			cSubIndex++;
+		}
+		if (allMatched)
+		{
+			if (indexOut != nullptr) { *indexOut = cIndex; }
+			return true;
+		}
+		else
+		{
+			cIndex++;
+		}
+	}
+	
+	return false;
+}
