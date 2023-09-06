@@ -11,6 +11,7 @@ Description:
 
 #include "memory.h"
 #include "intrinsics.h"
+#include "debug.h"
 #include "mouse_and_keyboard.h"
 #include "vectors.h"
 #include "file_system.h"

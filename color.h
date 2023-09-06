@@ -8,6 +8,7 @@ Date:   11\27\2022
 #define _COLOR_H
 
 #include "vectors.h"
+#include "intrinsics.h"
 
 // +--------------------------------------------------------------+
 // |                          Structure                           |
