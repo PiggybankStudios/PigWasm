@@ -26,6 +26,7 @@ union Color_t
 // +--------------------------------------------------------------+
 u8 ColorChannelToU8(r32 valueR32);
 r32 ColorChannelToR32(u8 valueU8);
+Color_t ColorLerp(Color_t leftColor, Color_t rightColor, r32 amount);
 
 inline Color_t NewColor(u32 argbValue)
 {

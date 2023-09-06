@@ -18,7 +18,7 @@ async function initialize()
 	
 	canvasContextGl = canvas.getContext("webgl2");
 	if (canvasContextGl === null) { console.error("Unable to initialize WebGL render context. Your browser or machine may not support it :("); return; }
-	console.log(canvasContextGl);
+	// console.log(canvasContextGl);
 	
 	wasmMemory = new WebAssembly.Memory({ initial: INITIAL_WASM_MEMORY_PAGE_COUNT });
 	let wasmEnvironment =
@@ -26,6 +26,7 @@ async function initialize()
 		memory: wasmMemory,
 		...apiFuncs_intrinsics,
 		...apiFuncs_custom,
+		...apiFuncs_audio,
 		...apiFuncs_opengl,
 	};
 	
@@ -36,6 +37,12 @@ async function initialize()
 	
 	let initializeTimestamp = Math.floor(Date.now() / 1000); //TODO: Should we be worried about this being a 32-bit float?
 	wasmModule.exports.Initialize(INITIAL_WASM_MEMORY_PAGE_COUNT, initializeTimestamp);
+	
+	audioWorker = new Worker('http://localhost:8000/audio_combined.js');
+	// console.log("audioWorker:", audioWorker);
+	// audioWorker.postMessage("This is a message from the main thread!");
+	
+	testAudio = document.querySelector("audio");
 	
 	window.addEventListener("mousemove", function(event)
 	{

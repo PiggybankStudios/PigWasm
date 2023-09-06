@@ -26,5 +26,12 @@ var webglObjects = {
 	textures: [ null ],
 }
 var wasmModule = null;
+var audioWorker = null;
+var audioContext = null;
+var audioTrack = null;
+var audioObjects = {
+	sources: [ null ],
+};
 var mousePositionX = 0;
 var mousePositionY = 0;
+var testAudio = null;

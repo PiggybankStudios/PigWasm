@@ -7,7 +7,15 @@ Date:   11\26\2022
 #ifndef _ASSERT_H
 #define _ASSERT_H
 
-#define MyBreak() //TODO: Route this somewhere!
+// +--------------------------------------------------------------+
+// |                           Function                           |
+// +--------------------------------------------------------------+
+void AssertionHandler(const char* conditionStr, const char* messageStr, const char* functionName, const char* filePath, u32 lineNumber, bool isLowLevel);
+
+// +--------------------------------------------------------------+
+// |                            Macros                            |
+// +--------------------------------------------------------------+
+#define MyBreak() AbortProgram()
 
 #if DEBUG_BUILD
 #define MyDebugBreak() MyBreak()
@@ -16,8 +24,8 @@ Date:   11\26\2022
 #endif
 
 //TODO: Add a callback function of some sort for debug purposes
-#define AssertMsg(Expression, message) do { if (!(Expression)) { MyBreak(); } } while(0)
-#define AssertMsg_(Expression, message) do { if (!(Expression)) { MyBreak(); } } while(0)
+#define AssertMsg(Expression, message)  do { if (!(Expression)) { AssertionHandler(#Expression, (message), __func__, __FILE__, __LINE__, false); MyBreak(); } } while(0)
+#define AssertMsg_(Expression, message) do { if (!(Expression)) { AssertionHandler(#Expression, (message), __func__, __FILE__, __LINE__, true);  MyBreak(); } } while(0)
 
 #define Assert(Expression)  AssertMsg((Expression), nullptr)
 #define Assert_(Expression) AssertMsg_((Expression), nullptr)

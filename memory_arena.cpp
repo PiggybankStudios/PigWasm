@@ -1601,6 +1601,16 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 									AssertMsg(AbsDiffU64(oldSize, afterPrefixSize) <= allowedSlop, "Given size did not match actual allocation size in Paged Heap during ReallocMem. This is a memory management bug");
 								}
 								
+								HeapAllocPrefix_t* nextSection = nullptr;
+								bool isNextSectionFilled = false;
+								u64 nextSectionSize = 0;
+								if ((allocOffset + sectionSize) < pageHeader->size)
+								{
+									nextSection = (HeapAllocPrefix_t*)(allocBytePntr + sectionSize);
+									isNextSectionFilled = IsAllocPrefixFilled(nextSection->size);
+									nextSectionSize = UnpackAllocPrefixSize(nextSection->size);
+								}
+								
 								bool reallocSucceeded = false;
 								//TODO: Uncomment this when we are ready to implement it!
 								/*if (allocOffset + sectionSize + sizeof(HeapAllocPrefix_t) <= pageHeader->size)
@@ -1608,23 +1618,36 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 									HeapAllocPrefix_t* nextPrefix = (HeapAllocPrefix_t*)(allocBytePntr + sectionSize);
 									//TODO: Figure out if we can grow into the following section!
 								}
-								else */if (allocOffset == 0 && arena->sourceArena != nullptr)
+								else */if (allocOffset == 0 && arena->sourceArena != nullptr &&
+									(nextSection == nullptr || (sectionSize + nextSectionSize == pageHeader->size && !isNextSectionFilled)))
 								{
-									// This section takes the entire page. Let's try ReallocMem out of our sourceArena
-									Assert(sectionSize == pageHeader->size);
-									u64 numNewBytes = newSize - pageHeader->size;
-									u64 newPageSize = sizeof(HeapAllocPrefix_t) + newSize;
-									if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("Reallocating page %llu/%llu from %llu->%llu bytes", pageIndex+1, arena->numPages, pageHeader->size, newPageSize); }
-									u8* newPageSpace = (u8*)ReallocMem(arena->sourceArena, pageHeader, sizeof(HeapPageHeader_t) + newPageSize, sizeof(HeapPageHeader_t) + pageHeader->size);
+									//This handles 1 of 2 scenarios
+									//   1. We are the only section in a page and we want to grow the page using ReallocMem out of sourceArena
+									//   2. We are the only filled section in a page (with 1 empty section following) and we want to grow into the page
+									u64 numNewBytes = (newSize - (sectionSize + sizeof(HeapAllocPrefix_t)));
+									u64 numNewPageBytes = 0;
+									u8* newPageSpace = (u8*)pageHeader;
+									u64 newPageSize = pageHeader->size;
+									if (sizeof(HeapAllocPrefix_t) + newSize > pageHeader->size)
+									{
+										// This section takes the entire page. Let's try ReallocMem out of our sourceArena
+										numNewPageBytes = newSize - pageHeader->size;
+										newPageSize = sizeof(HeapAllocPrefix_t) + newSize;
+										if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("Reallocating page %llu/%llu from %llu->%llu bytes", pageIndex+1, arena->numPages, pageHeader->size, newPageSize); }
+										newPageSpace = (u8*)ReallocMem(arena->sourceArena, pageHeader, sizeof(HeapPageHeader_t) + newPageSize, sizeof(HeapPageHeader_t) + pageHeader->size);
+									}
+									
 									if (newPageSpace == (u8*)pageHeader)
 									{
 										if (IsFlagSet(arena->flags, MemArenaFlag_DebugOutput)) { PrintLine_D("Page expanded without moving at 0x%08X", (u32)newPageSpace); }
 										pageHeader->size = newPageSize;
 										prefixPntr->size = PackAllocPrefixSize(true, newSize);
+										sectionSize = newSize;
 										result = (u8*)allocPntr;
-										reallocSucceeded = true;
-										arena->size += numNewBytes;
+										pageHeader->used += numNewBytes;
+										arena->size += numNewPageBytes;
 										arena->used += numNewBytes;
+										reallocSucceeded = true;
 									}
 									else if (newPageSpace != nullptr)
 									{
@@ -1642,14 +1665,34 @@ void* ReallocMem(MemArena_t* arena, void* allocPntr, u64 newSize, u64 oldSize, A
 										prefixPntr = (HeapAllocPrefix_t*)(newPageSpace + sizeof(HeapPageHeader_t));
 										afterPrefixPntr = (u8*)(prefixPntr + 1);
 										prefixPntr->size = PackAllocPrefixSize(true, newSize);
+										sectionSize = newSize;
 										result = afterPrefixPntr;
-										reallocSucceeded = true;
-										arena->size += numNewBytes;
+										pageHeader->used += numNewBytes;
+										arena->size += numNewPageBytes;
 										arena->used += numNewBytes;
+										reallocSucceeded = true;
 									}
 									else
 									{
 										reallocSucceeded = false;
+									}
+									
+									if (reallocSucceeded && sectionSize < pageHeader->size)
+									{
+										if (pageHeader->size - sectionSize <= sizeof(HeapAllocPrefix_t))
+										{
+											//there is still space left, but it's not big enough for another empty section with prefix
+											u64 numBytesLeftover = (pageHeader->size - sectionSize);
+											prefixPntr->size = PackAllocPrefixSize(true, pageHeader->size);
+											pageHeader->used = pageHeader->size;
+											arena->used -= sizeof(HeapAllocPrefix_t);
+											arena->used += numBytesLeftover;
+										}
+										else
+										{
+											nextSection = (HeapAllocPrefix_t*)(((u8*)prefixPntr) + sectionSize);
+											nextSection->size = PackAllocPrefixSize(false, pageHeader->size - sectionSize);
+										}
 									}
 								}
 								

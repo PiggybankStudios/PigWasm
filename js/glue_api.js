@@ -27,6 +27,10 @@ function js_pow(base, exponent)
 {
 	return Math.pow(base, exponent);
 }
+function js_fminf(value1, value2)
+{
+	return Math.min(value1, value2);
+}
 
 apiFuncs_intrinsics = {
 	sinf:   js_sinf,
@@ -35,11 +39,17 @@ apiFuncs_intrinsics = {
 	roundf: js_roundf,
 	ldexp:  js_ldexp,
 	pow:    js_pow,
+	fminf:  js_fminf,
 };
 
 // +--------------------------------------------------------------+
 // |                       Custom Functions                       |
 // +--------------------------------------------------------------+
+function AbortProgram()
+{
+	throw new Error("WebAssembly abort triggered");
+}
+
 function RequestMoreMemoryPages(numPages)
 {
 	// console.log("Memory growing by " + numPages + " pages");
@@ -49,6 +59,14 @@ function RequestMoreMemoryPages(numPages)
 function PrintoutStack()
 {
 	console.trace();
+}
+
+function HandleAssertionInJs(conditionStrPntr, messageStrPntr, functionNamePntr, filePathPntr, lineNumber, isLowLevel)
+{
+	let conditionStr = wasmPntrToJsString(conditionStrPntr);
+	let messageStr = wasmPntrToJsString(messageStrPntr);
+	let functionNameStr = wasmPntrToJsString(functionNamePntr);
+	let filePathStr = wasmPntrToJsString(filePathPntr);
 }
 
 function DebugOutput(level, messagePtr)
@@ -71,6 +89,11 @@ function DebugOutput(level, messagePtr)
 		if (level == 4) { colorString = "color: #66D9EF;"; } //DbgLevel_Other  MonokaiBlue
 		console.log("%c" + wasmPntrToJsString(messagePtr), colorString);
 	}
+}
+
+function ShowPopupMessage(messageStrPntr)
+{
+	window.alert(wasmPntrToJsString(messageStrPntr));
 }
 
 function GetCanvasSize(widthOutPntr, heightOutPntr)
@@ -125,23 +148,102 @@ function RequestFileAsync(requestId, filePathPntr)
 //Returns num microseconds since program start (rounded and cast to BigInt)
 function GetPerfTime()
 {
+	//NOTE: This only works if the browser has been configured to give accurate time.
+	//      Because of exploits like Spectre and Meltdown, browser generally do not give
+	//      accurate time information by default. In firefox this can be configured
+	//      through the about:config page and disabling privacy.reduceTimerPrecision
 	return BigInt(Math.round(window.performance.now() * 1000));
 }
 
 function TestFunction()
 {
+	audioWorker.postMessage("Hello worker! How're you doin'?");
 	return jsStringToWasmPntr(ArenaName_MainHeap, "Hello from Javascript!");
 }
 
 apiFuncs_custom = {
+	AbortProgram: AbortProgram,
 	RequestMoreMemoryPages: RequestMoreMemoryPages,
 	PrintoutStack: PrintoutStack,
+	HandleAssertionInJs: HandleAssertionInJs,
 	DebugOutput: DebugOutput,
+	ShowPopupMessage: ShowPopupMessage,
 	GetCanvasSize: GetCanvasSize,
 	GetMousePosition: GetMousePosition,
 	RequestFileAsync: RequestFileAsync,
 	GetPerfTime: GetPerfTime,
 	TestFunction: TestFunction,
+};
+
+// +--------------------------------------------------------------+
+// |                       Audio Functions                        |
+// +--------------------------------------------------------------+
+function InitializeAudioOutput()
+{
+	let audioContextConstructor = window.AudioContext || window.webkitAudioContext;
+	audioContext = new audioContextConstructor();
+	// console.log("audioContext:", audioContext);
+	audioTrack = audioContext.createMediaElementSource(testAudio);
+	audioTrack.connect(audioContext.destination)
+}
+
+function TestAudio()
+{
+	if (audioContext != null)
+	{
+		testAudio.play();
+	}
+}
+
+function CreateAudioSourceFromFile(audioFileDataSize, audioFileDataPntr)
+{
+	let newSource = audioContext.createBufferSource();
+	// console.log("newSource:", newSource);
+	let buf = new Uint8Array(wasmMemory.buffer, audioFileDataPntr, audioFileDataSize);
+	// console.log("buf:", buf);
+	
+	// newSource.buffer = buf.buffer;
+	// audioContext.decodeAudioData(buf.buffer, function(res)
+	// {
+	// 	audioSource.buffer = res;
+	// 	newSource.connect(audioContext.destination);
+	// 	// audioSource.noteOn( 0 );
+	// });
+	
+	let newSourceId = audioObjects.sources.length;
+	audioObjects.sources.push(newSource);
+	return newSourceId;
+}
+function DestroyAudioSource(sourceId)
+{
+	if (!verifyParameter(verifySourceId(sourceId), "DestroyAudioSource", "sourceId", sourceId)) { return; }
+	audioObjects.sources[sourceId] = null;
+}
+
+function PlayAudioSource(sourceId)
+{
+	if (!verifyParameter(verifySourceId(sourceId), "PlayAudioSource", "sourceId", sourceId)) { return; }
+	audioObjects.sources[sourceId].play();
+}
+function PauseAudioSource(sourceId)
+{
+	if (!verifyParameter(verifySourceId(sourceId), "PauseAudioSource", "sourceId", sourceId)) { return; }
+	audioObjects.sources[sourceId].pause();
+}
+function StopAudioSource(sourceId)
+{
+	if (!verifyParameter(verifySourceId(sourceId), "StopAudioSource", "sourceId", sourceId)) { return; }
+	audioObjects.sources[sourceId].stop();
+}
+
+apiFuncs_audio = {
+	InitializeAudioOutput: InitializeAudioOutput,
+	TestAudio: TestAudio,
+	CreateAudioSourceFromFile: CreateAudioSourceFromFile,
+	DestroyAudioSource: DestroyAudioSource,
+	PlayAudioSource: PlayAudioSource,
+	PauseAudioSource: PauseAudioSource,
+	StopAudioSource: StopAudioSource,
 };
 
 // +--------------------------------------------------------------+

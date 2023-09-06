@@ -17,7 +17,7 @@ void* StbImageMalloc(size_t numBytes)
 }
 void StbImageFree(void* pntr)
 {
-	FreeMem(mainHeap, pntr);
+	FreeMem(mainHeap, pntr, 0, true);
 }
 void* StbImageRealloc(void* pntr, size_t newSize)
 {
