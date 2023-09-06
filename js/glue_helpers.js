@@ -23,6 +23,20 @@ async function loadWasmModule(filePath, environment)
 // +--------------------------------------------------------------+
 // |                     Wasm Data Marshaling                     |
 // +--------------------------------------------------------------+
+function writeToWasmCharBuffer(bufferLength, bufferPntr, stringToWrite)
+{
+	console.assert(typeof(bufferLength)  == "number", "Invalid type for bufferLength passed to writeToWasmCharBuffer");
+	console.assert(typeof(bufferPntr)    == "number", "Invalid type for bufferPntr passed to writeToWasmCharBuffer");
+	console.assert(typeof(stringToWrite) == "string", "Invalid type for stringToWrite passed to writeToWasmCharBuffer");
+	let encodedStr = new TextEncoder().encode(stringToWrite);
+	let buf = new Uint8Array(wasmMemory.buffer);
+	for (let cIndex = 0; cIndex < encodedStr.length && cIndex < bufferLength-1; cIndex++)
+	{
+		buf[bufferPntr + cIndex] = encodedStr[cIndex];
+	}
+	buf[bufferPntr + Math.min(encodedStr.length, bufferLength-1)] = 0;
+}
+
 //TODO: Add support for utf-8 encoding
 function wasmPntrToJsString(ptr)
 {
@@ -42,34 +56,18 @@ function wasmPntrToJsString(ptr)
 	return String.fromCharCode(...codes);
 }
 
-function jsStringToWasmPntr(engine, jsString)
+function jsStringToWasmPntr(arenaName, jsString)
 {
 	let allocSize = jsString.length+1;
-	let result = engine.exports.AllocWasmMemory(allocSize);
-	if (result != 0)
-	{
-		let buf = new Uint8Array(wasmMemory.buffer);
-		for (var cIndex = 0; cIndex < jsString.length; cIndex++)
-		{
-			buf[result + cIndex] = jsString[cIndex];
-		}
-		buf[result + jsString.length] = '\0';
-	}
+	let result = wasmModule.exports.AllocateMemory(arenaName, allocSize);
+	writeToWasmCharBuffer(allocSize, result, jsString);
+	WritePntr_U8(result + (allocSize-1), 0x00);
 	return result;
 }
 
-function writeToWasmCharBuffer(bufferLength, bufferPntr, stringToWrite)
+function freeWasmString(arenaName, stringPntr, stringLength)
 {
-	console.assert(typeof(bufferLength)  == "number", "Invalid type for bufferLength passed to writeToWasmCharBuffer");
-	console.assert(typeof(bufferPntr)    == "number", "Invalid type for bufferPntr passed to writeToWasmCharBuffer");
-	console.assert(typeof(stringToWrite) == "string", "Invalid type for stringToWrite passed to writeToWasmCharBuffer");
-	let encodedStr = new TextEncoder().encode(stringToWrite);
-	let buf = new Uint8Array(wasmMemory.buffer);
-	for (let cIndex = 0; cIndex < encodedStr.length && cIndex < bufferLength-1; cIndex++)
-	{
-		buf[bufferPntr + cIndex] = encodedStr[cIndex];
-	}
-	buf[bufferPntr + Math.min(encodedStr.length, bufferLength-1)] = 0;
+	wasmModule.exports.FreeMemory(arenaName, stringPntr, stringLength+1);
 }
 
 // +--------------------------------------------------------------+
@@ -214,6 +212,15 @@ function verifyShaderId(shaderId)
 	if (webglObjects == null || webglObjects.shaders == null) { return "Shaders array has not been initialized yet!"; }
 	if (shaderId >= webglObjects.shaders.length) { return "ShaderId is too high!"; }
 	if (webglObjects.shaders[shaderId] == null) { return "ShaderId is for a destroyed shader!"; }
+	return null;
+}
+function verifyUniformLocationId(locationId)
+{
+	if (typeof(locationId) != "number") { return "UniformLocationId is not a number!"; }
+	if (locationId == 0) { return "UniformLocationId is 0!"; }
+	if (webglObjects == null || webglObjects.uniforms == null) { return "Uniforms array has not been initialized yet!"; }
+	if (locationId >= webglObjects.uniforms.length) { return "UniformLocationId is too high!"; }
+	if (webglObjects.uniforms[locationId] == null) { return "UniformLocationId is for a destroyed uniform!"; }
 	return null;
 }
 function verifyVertBufferId(vertBufferId)

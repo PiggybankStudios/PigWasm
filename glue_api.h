@@ -10,14 +10,31 @@ This is #included by common.h
 
 #define GLUE_FUNC extern "C"
 
+typedef u64 PerfTime_t;
+
+r64 GetPerfTimeDiffMs(PerfTime_t start, PerfTime_t end)
+{
+	if (end >= start)
+	{
+		return (r64)(end - start) / 1000.0;
+	}
+	else
+	{
+		return -((r64)(start - end) / 1000.0);
+	}
+}
+
 // +--------------------------------------------------------------+
 // |                       Custom Functions                       |
 // +--------------------------------------------------------------+
 GLUE_FUNC void RequestMoreMemoryPages(u32 numPages);
+GLUE_FUNC void PrintoutStack();
 GLUE_FUNC void DebugOutput(int level, const char* message);
 GLUE_FUNC void GetCanvasSize(r32* widthOut, r32* heightOut);
 GLUE_FUNC void GetMousePosition(r32* xPosOut, r32* yPosOut);
-GLUE_FUNC void TestFunction(u32 bufferLength, char* bufferPntr);
+GLUE_FUNC void RequestFileAsync(u32 requestId, const char* filePath);
+GLUE_FUNC PerfTime_t GetPerfTime();
+GLUE_FUNC const char* TestFunction();
 
 // +--------------------------------------------------------------+
 // |                       OpenGL Functions                       |
@@ -37,7 +54,6 @@ GLUE_FUNC void   glDisable(GLenum cap);
 GLUE_FUNC void   glBlendFunc(GLenum sfactor, GLenum dfactor);
 GLUE_FUNC void   glBlendFuncSeparate(GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha);
 GLUE_FUNC void   glDepthFunc(GLenum func);
-GLUE_FUNC void   glAlphaFunc(GLenum func, GLclampf ref);
 GLUE_FUNC void   glFrontFace(GLenum mode);
 GLUE_FUNC void   glLineWidth(GLfloat width);
 GLUE_FUNC GLuint glGenFramebuffer(); //changed
@@ -61,7 +77,7 @@ GLUE_FUNC void   glTexImage2D(GLenum target, GLint level, GLint internalformat, 
 GLUE_FUNC void   glTexParameteri(GLenum target, GLenum pname, GLint param);
 GLUE_FUNC void   glTexParameteriv(GLenum target, GLenum pname, const GLint* params);
 GLUE_FUNC void   glEnableVertexAttribArray(GLuint index);
-GLUE_FUNC void   glActiveTexture(GLenum texture);
+GLUE_FUNC void   glActiveTexture(GLenum textureIndex);
 GLUE_FUNC void   glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void* pointer);
 GLUE_FUNC void   glShaderSource(GLuint shader, const GLchar* string); //changed
 GLUE_FUNC void   glCompileShader(GLuint shader);

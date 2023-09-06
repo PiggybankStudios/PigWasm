@@ -2,6 +2,7 @@
 File:   memory_arena.h
 Author: Taylor Robbins
 Date:   11\26\2022
+This is #included by common.h
 */
 
 #ifndef _MEMORY_ARENA_H
@@ -61,6 +62,7 @@ enum MemArenaFlag_t
 	MemArenaFlag_BreakOnAlloc     = 0x0010,
 	MemArenaFlag_BreakOnFree      = 0x0020,
 	MemArenaFlag_BreakOnRealloc   = 0x0040,
+	MemArenaFlag_DebugOutput      = 0x0080,
 	MemArenaFlag_NumFlags         = 6,
 };
 

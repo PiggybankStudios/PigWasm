@@ -9,6 +9,7 @@ Pig WASM currently contains the following features:
 5. An example batch file that uses LLVM's clang to compile the C code to web assembly. It uses a unity build pattern which avoids the need for a complicated build system like make.
 6. Some simple structures that encapsulate various OpenGL primitives (shaders, textures, etc.) and provide some functions for creating and managing these objects.
 7. A set of standard library replacement files that provide minimal functionality and naive implementations for various standard library features (like memcpy)
+8. A simple python script for comining the javascript files into a single file
 
 Some of the files can be included directly into your project, while others (like debug output) are somewhat interdependant and require at least a few files to be added to be functional. This library is not a standalone compilable unit and it's up to the user to build out a main.cpp and other supporting structure that utilizes this library.
 

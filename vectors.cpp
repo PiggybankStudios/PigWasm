@@ -7,29 +7,23 @@ Description:
 */
 
 #include "common.h"
-#include "shared/vectors.h"
+#include "vectors.h"
 
-inline v2 NewVec2(r32 x, r32 y)
+#include "intrinsics.h"
+
+// +--------------------------------------------------------------+
+// |                          Functions                           |
+// +--------------------------------------------------------------+
+r32 Vec2Length(v2 vector)
 {
+	return SqrtR32(vector.x * vector.x + vector.y * vector.y);
+}
+v2 Vec2Normalize(v2 vector)
+{
+	if (vector.x == 0 && vector.y == 0) { return vector; }
+	r32 length = Vec2Length(vector);
 	v2 result;
-	result.x = x;
-	result.y = y;
-	return result;
-}
-inline v3 NewVec3(r32 x, r32 y, r32 z)
-{
-	v3 result;
-	result.x = x;
-	result.y = y;
-	result.z = z;
-	return result;
-}
-inline v4 NewVec4(r32 x, r32 y, r32 z, r32 w)
-{
-	v4 result;
-	result.x = x;
-	result.y = y;
-	result.z = z;
-	result.w = w;
+	result.x = vector.x / length;
+	result.y = vector.y / length;
 	return result;
 }

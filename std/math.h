@@ -63,6 +63,9 @@ inline double log2(double value)                 { return __builtin_log2(value);
 inline float  log10f(float value)                { return __builtin_log10f(value);         }
 inline double log10(double value)                { return __builtin_log10(value);          }
 
+inline double ldexp(double value, int exponent)  { return __builtin_ldexp(value, exponent);  }
+inline float  ldexpf(float value, int exponent)  { return __builtin_ldexpf(value, exponent); }
+
 //Scales x by FLT_RADIX raised to the power of n
 inline float       scalbnf(float value, int power)       { return __builtin_scalbnf(value, power); }
 inline double      scalbn(double value, int power)       { return __builtin_scalbn(value, power);  }

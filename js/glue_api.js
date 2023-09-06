@@ -6,9 +6,35 @@ function js_sinf(value)
 {
 	return Math.sin(value);
 }
+function js_cosf(value)
+{
+	return Math.cos(value);
+}
+function js_round(value)
+{
+	return Math.round(value);
+}
+function js_roundf(value)
+{
+	return Math.round(value);
+}
+function js_ldexp(value, exponent)
+{
+	//TODO: Maybe we need to care about inaccuracy here?? Check https://blog.codefrau.net/2014/08/deconstructing-floats-frexp-and-ldexp.html
+	return value * Math.pow(2, exponent);
+}
+function js_pow(base, exponent)
+{
+	return Math.pow(base, exponent);
+}
 
 apiFuncs_intrinsics = {
-	sinf: js_sinf,
+	sinf:   js_sinf,
+	cosf:   js_cosf,
+	round:  js_round,
+	roundf: js_roundf,
+	ldexp:  js_ldexp,
+	pow:    js_pow,
 };
 
 // +--------------------------------------------------------------+
@@ -16,8 +42,13 @@ apiFuncs_intrinsics = {
 // +--------------------------------------------------------------+
 function RequestMoreMemoryPages(numPages)
 {
-	console.log("Memory growing by " + numPages + " pages");
+	// console.log("Memory growing by " + numPages + " pages");
 	wasmMemory.grow(numPages);
+}
+
+function PrintoutStack()
+{
+	console.trace();
 }
 
 function DebugOutput(level, messagePtr)
@@ -44,9 +75,9 @@ function DebugOutput(level, messagePtr)
 
 function GetCanvasSize(widthOutPntr, heightOutPntr)
 {
-	let pixelRatio = window.devicePixelRatio;
-	let canvasWidth = canvas.width / pixelRatio;
-	let canvasHeight = canvas.height / pixelRatio;
+	// let pixelRatio = window.devicePixelRatio;
+	let canvasWidth = canvas.width;// / pixelRatio;
+	let canvasHeight = canvas.height;// / pixelRatio;
 	// console.log("Canvas size: " + canvasWidth + "x" + canvasHeight + " (ratio " + pixelRatio + ")");
 	WritePntr_R32(widthOutPntr, canvasWidth);
 	WritePntr_R32(heightOutPntr, canvasHeight);
@@ -58,16 +89,58 @@ function GetMousePosition(xPosOutPntr, yPosOutPntr)
 	WritePntr_R32(yPosOutPntr, mousePositionY);
 }
 
-function TestFunction(bufferLength, bufferPntr)
+function RequestFileAsync(requestId, filePathPntr)
 {
-	writeToWasmCharBuffer(bufferLength, bufferPntr, "Hello WASM!");
+	let filePath = wasmPntrToJsString(filePathPntr);
+	// console.log("RequestFileAsync(" + requestId + ", " + filePath + ")");
+	
+	let baseUrl = window.location.origin;
+	//TODO: Is there any better way we could do this without hardcoding the repository name here!?
+	let isRunningInGithubPages = baseUrl.includes("github.io");
+	if (isRunningInGithubPages)
+	{
+		baseUrl += "/BreakoutPigWasm";
+	}
+	
+	// console.log("base url: \"" + baseUrl + "\"");
+	fetch(baseUrl + "/" + filePath, { cache: "no-cache" })
+	.then(data => data.blob())
+	.then(blob => blob.arrayBuffer())
+	.then(resultBuffer =>
+	{
+		// console.log(resultBuffer);
+		let bufferU8 = new Uint8Array(resultBuffer);
+		let spacePntr = wasmModule.exports.AllocateMemory(ArenaName_MainHeap, resultBuffer.byteLength);
+		// console.log("Allocated at " + spacePntr);
+		let buf = new Uint8Array(wasmMemory.buffer);
+		for (let bIndex = 0; bIndex < resultBuffer.byteLength; bIndex++)
+		{
+			buf[spacePntr + bIndex] = bufferU8[bIndex];
+		}
+		wasmModule.exports.HandleFileReady(requestId, resultBuffer.byteLength, spacePntr);
+		wasmModule.exports.FreeMemory(ArenaName_MainHeap, spacePntr, resultBuffer.byteLength);
+	});
+}
+
+//Returns num microseconds since program start (rounded and cast to BigInt)
+function GetPerfTime()
+{
+	return BigInt(Math.round(window.performance.now() * 1000));
+}
+
+function TestFunction()
+{
+	return jsStringToWasmPntr(ArenaName_MainHeap, "Hello from Javascript!");
 }
 
 apiFuncs_custom = {
 	RequestMoreMemoryPages: RequestMoreMemoryPages,
+	PrintoutStack: PrintoutStack,
 	DebugOutput: DebugOutput,
 	GetCanvasSize: GetCanvasSize,
 	GetMousePosition: GetMousePosition,
+	RequestFileAsync: RequestFileAsync,
+	GetPerfTime: GetPerfTime,
 	TestFunction: TestFunction,
 };
 
@@ -96,26 +169,44 @@ function glGetProgramiv(programId, pname, params)
 	// console.log("Programiv: " + value);
 	WritePntr_I32(params, value);
 }
-function glGetShaderInfoLog(shaderId, maxLength, length, infoLog)
+function glGetShaderInfoLog(shaderId, maxLength, lengthOutPntr, infoLogPntr)
 {
-	console.assert(shaderId < webglObjects.shaders.length, "Invalid shader ID passed to glGetShaderInfoLog");
+	if (!verifyParameter(verifyShaderId(shaderId), "glGetShaderInfoLog", "shaderId", shaderId)) { return; }
 	var logString = canvasContextGl.getShaderInfoLog(webglObjects.shaders[shaderId]);
 	if (logString.length > maxLength) { logString = logString.substring(0, maxLength); }
 	// console.log("Shader info log:", logString);
-	WritePntr_I32(length, logString.length);
-	writeToWasmCharBuffer(maxLength, infoLog, logString);
+	WritePntr_I32(lengthOutPntr, logString.length);
+	writeToWasmCharBuffer(maxLength, infoLogPntr, logString);
 }
-function glGetProgramInfoLog(program, maxLength, length, infoLog)
+function glGetProgramInfoLog(programId, maxLength, lengthOutPntr, infoLogPntr)
 {
-	console.error("glGetProgramInfoLog is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyProgramId(programId), "glGetProgramInfoLog", "programId", programId)) { return; }
+	var logString = canvasContextGl.getProgramInfoLog(webglObjects.programs[programId]);
+	if (logString.length > maxLength) { logString = logString.substring(0, maxLength); }
+	// console.log("Program info log:", logString);
+	WritePntr_I32(lengthOutPntr, logString.length);
+	writeToWasmCharBuffer(maxLength, infoLogPntr, logString);
 }
-function glGetAttribLocation(program, name) //returns GLint
+function glGetAttribLocation(programId, namePntr) //returns GLint
 {
-	console.error("glGetAttribLocation is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyProgramId(programId), "glGetAttribLocation", "programId", programId)) { return; }
+	let result = canvasContextGl.getAttribLocation(webglObjects.programs[programId], wasmPntrToJsString(namePntr));
+	return result;
 }
-function glGetUniformLocation(program, name) //returns GLint
+function glGetUniformLocation(programId, namePntr) //returns GLint
 {
-	console.error("glGetUniformLocation is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyProgramId(programId), "glGetUniformLocation", "programId", programId)) { return; }
+	let uniformLocationObj = canvasContextGl.getUniformLocation(webglObjects.programs[programId], wasmPntrToJsString(namePntr));
+	if (uniformLocationObj != null)
+	{
+		let locationId = webglObjects.uniforms.length;
+		webglObjects.uniforms.push(uniformLocationObj);
+		return locationId;
+	}
+	else
+	{
+		return -1;
+	}
 }
 function glGetTextureSubImage(texture, level, xoffset, yoffset, zoffset, width, height, depth, format, type, bufSize, pixels)
 {
@@ -135,27 +226,19 @@ function glDisable(cap)
 }
 function glBlendFunc(sfactor, dfactor)
 {
-	console.error("glBlendFunc is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.blendFunc(sfactor, dfactor);
 }
 function glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha)
 {
-	console.error("glBlendFuncSeparate is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.blendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
 }
 function glDepthFunc(func)
 {
-	console.error("glDepthFunc is unimplemented!"); //TODO: Implement me!
-}
-function glAlphaFunc(func, ref)
-{
-	console.error("glAlphaFunc is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.depthFunc(func);
 }
 function glFrontFace(mode)
 {
-	console.error("glFrontFace is unimplemented!"); //TODO: Implement me!
-}
-function glLineWidth(width)
-{
-	console.error("glLineWidth is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.frontFace(mode);
 }
 function glGenFramebuffer()
 {
@@ -170,7 +253,10 @@ function glGenVertexArray()
 }
 function glGenTexture()
 {
-	console.error("glGenTexture is unimplemented!"); //TODO: Implement me!
+	let texture = canvasContextGl.createTexture();
+	let textureId = webglObjects.textures.length;
+	webglObjects.textures.push(texture);
+	return textureId;
 }
 function glGenBuffer()
 {
@@ -199,7 +285,9 @@ function glDeleteFramebuffer(frameBufferId)
 }
 function glDeleteTexture(textureId)
 {
-	console.error("glDeleteTexture is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyTextureId(textureId), "glDeleteTexture", "textureId", textureId)) { return; }
+	canvasContextGl.deleteTexture(webglObjects.textures[textureId]);
+	webglObjects.textures[textureId] = null;
 }
 function glDeleteShader(shaderId)
 {
@@ -228,9 +316,10 @@ function glBindVertexArray(vaoId)
 	if (!verifyParameter(verifyVertArrayId(vaoId), "glBindVertexArray", "vaoId", vaoId)) { return; }
 	canvasContextGl.bindVertexArray(webglObjects.vertArrays[vaoId]);
 }
-function glBindTexture(target, texture)
+function glBindTexture(target, textureId)
 {
-	console.error("glBindTexture is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyTextureId(textureId), "glBindTexture", "textureId", textureId)) { return; }
+	canvasContextGl.bindTexture(target, webglObjects.textures[textureId]);
 }
 function glBindBuffer(target, bufferId)
 {
@@ -246,14 +335,17 @@ function glTexImage2DMultisample(target, samples, internalformat, width, height,
 {
 	console.error("glTexImage2DMultisample is unimplemented!"); //TODO: Implement me!
 }
-function glTexImage2D(target, level, internalformat, width, height, border, format, type, data)
+function glTexImage2D(target, level, internalformat, width, height, border, format, type, dataPntr)
 {
-	console.error("glTexImage2D is unimplemented!"); //TODO: Implement me!
+	//TODO: Do we need a size for Uint8Array
+	let dataBuffer = new Uint8Array(wasmMemory.buffer, dataPntr);
+	canvasContextGl.texImage2D(target, level, internalformat, width, height, border, format, type, dataBuffer);
 }
 function glTexParameteri(target, pname, param)
 {
-	console.error("glTexParameteri is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.texParameteri(target, pname, param);
 }
+//TODO: Do we actually need this implemented?
 function glTexParameteriv(target, pname, params)
 {
 	console.error("glTexParameteriv is unimplemented!"); //TODO: Implement me!
@@ -262,9 +354,9 @@ function glEnableVertexAttribArray(index)
 {
 	canvasContextGl.enableVertexAttribArray(index);
 }
-function glActiveTexture(texture)
+function glActiveTexture(textureIndex)
 {
-	console.error("glActiveTexture is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.activeTexture(textureIndex);
 }
 function glVertexAttribPointer(index, size, type, normalized, stride, pointer)
 {
@@ -294,7 +386,7 @@ function glLinkProgram(programId)
 }
 function glGenerateMipmap(target)
 {
-	console.error("glGenerateMipmap is unimplemented!"); //TODO: Implement me!
+	canvasContextGl.generateMipmap(target);
 }
 function glBufferData(target, size, dataPntr, usage)
 {
@@ -317,29 +409,36 @@ function glFramebufferTexture2D(target, attachment, textarget, texture, level)
 {
 	console.error("glFramebufferTexture2D is unimplemented!"); //TODO: Implement me!
 }
-function glUniform1i(location, v0)
+function glUniform1i(locationId, v0)
 {
-	console.error("glUniform1i is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform1i", "locationId", locationId)) { return; }
+	canvasContextGl.uniform1i(webglObjects.uniforms[locationId], v0);
 }
-function glUniform1f(location, v0)
+function glUniform1f(locationId, v0)
 {
-	console.error("glUniform1f is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform1f", "locationId", locationId)) { return; }
+	canvasContextGl.uniform1f(webglObjects.uniforms[locationId], v0);
 }
-function glUniform2f(location, v0, v1)
+function glUniform2f(locationId, v0, v1)
 {
-	console.error("glUniform2f is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform2f", "locationId", locationId)) { return; }
+	canvasContextGl.uniform2f(webglObjects.uniforms[locationId], v0, v1);
 }
-function glUniform3f(location, v0, v1, v2)
+function glUniform3f(locationId, v0, v1, v2)
 {
-	console.error("glUniform3f is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform3f", "locationId", locationId)) { return; }
+	canvasContextGl.uniform3f(webglObjects.uniforms[locationId], v0, v1, v2);
 }
-function glUniform4f(location, v0, v1, v2, v3)
+function glUniform4f(locationId, v0, v1, v2, v3)
 {
-	console.error("glUniform4f is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniform4f", "locationId", locationId)) { return; }
+	canvasContextGl.uniform4f(webglObjects.uniforms[locationId], v0, v1, v2, v3);
 }
-function glUniformMatrix4fv(location, count, transpose, value)
+function glUniformMatrix4fv(locationId, count, transpose, valuePntr)
 {
-	console.error("glUniformMatrix4fv is unimplemented!"); //TODO: Implement me!
+	if (!verifyParameter(verifyUniformLocationId(locationId), "glUniformMatrix4fv", "locationId", locationId)) { return; }
+	let matrixArray = new Float32Array(wasmMemory.buffer, valuePntr, count * (4 * 4)); //4 * 4 for 4x4 size matrix
+	canvasContextGl.uniformMatrix4fv(webglObjects.uniforms[locationId], transpose, matrixArray);
 }
 function glViewport(x, y, width, height)
 {
@@ -391,9 +490,7 @@ apiFuncs_opengl = {
 	glBlendFunc:                      glBlendFunc,
 	glBlendFuncSeparate:              glBlendFuncSeparate,
 	glDepthFunc:                      glDepthFunc,
-	glAlphaFunc:                      glAlphaFunc,
 	glFrontFace:                      glFrontFace,
-	glLineWidth:                      glLineWidth,
 	glGenFramebuffer:                 glGenFramebuffer,
 	glGenVertexArray:                 glGenVertexArray,
 	glGenTexture:                     glGenTexture,
