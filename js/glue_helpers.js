@@ -260,6 +260,16 @@ function verifyTextureId(textureId)
 	return null;
 }
 
+function verifySourceId(sourceId)
+{
+	if (typeof(sourceId) != "number") { return "SourceId is not a number!"; }
+	if (sourceId == 0) { return "SourceId is 0!"; }
+	if (audioObjects == null || audioObjects.sources == null) { return "Audio Source array has not been initialized yet!"; }
+	if (sourceId >= audioObjects.sources.length) { return "SourceId is too high!"; }
+	if (audioObjects.sources[sourceId] == null) { return "SourceId is for a destroyed audio source!"; }
+	return null;
+}
+
 function verifyParameter(verifyResult, functionName, parameterName, parameterValue)
 {
 	if (verifyResult == null) { return true; }

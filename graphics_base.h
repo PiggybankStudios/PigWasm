@@ -176,6 +176,6 @@ bool StartLoadTexture(Texture_t* targetTexture, MyStr_t filePath, bool pixelated
 void BindShader(Shader_t* shader);
 void BindVertBuffer(VertBuffer_t* buffer);
 void BindVertArrayObj(VertArrayObj_t* vao);
-void BindTexture1(Texture_t* texture);
+void BindTexture1(Shader_t* boundShader, Texture_t* texture);
 
 #endif //  _GRAPHICS_BASE_H

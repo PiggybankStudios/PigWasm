@@ -27,14 +27,28 @@ r64 GetPerfTimeDiffMs(PerfTime_t start, PerfTime_t end)
 // +--------------------------------------------------------------+
 // |                       Custom Functions                       |
 // +--------------------------------------------------------------+
+GLUE_FUNC void AbortProgram();
 GLUE_FUNC void RequestMoreMemoryPages(u32 numPages);
 GLUE_FUNC void PrintoutStack();
+GLUE_FUNC void HandleAssertionInJs(const char* conditionStr, const char* messageStr, const char* functionName, const char* filePath, u32 lineNumber, bool isLowLevel);
 GLUE_FUNC void DebugOutput(int level, const char* message);
+GLUE_FUNC void ShowPopupMessage(const char* message);
 GLUE_FUNC void GetCanvasSize(r32* widthOut, r32* heightOut);
 GLUE_FUNC void GetMousePosition(r32* xPosOut, r32* yPosOut);
 GLUE_FUNC void RequestFileAsync(u32 requestId, const char* filePath);
 GLUE_FUNC PerfTime_t GetPerfTime();
 GLUE_FUNC const char* TestFunction();
+
+// +--------------------------------------------------------------+
+// |                       Audio Functions                        |
+// +--------------------------------------------------------------+
+GLUE_FUNC void InitializeAudioOutput();
+GLUE_FUNC void TestAudio();
+GLUE_FUNC u32 CreateAudioSourceFromFile(u32 audioFileDataSize, const void* audioFileDataPntr);
+GLUE_FUNC void DestroyAudioSource(u32 sourceId);
+GLUE_FUNC void PlayAudioSource(u32 sourceId);
+GLUE_FUNC void PauseAudioSource(u32 sourceId);
+GLUE_FUNC void StopAudioSource(u32 sourceId);
 
 // +--------------------------------------------------------------+
 // |                       OpenGL Functions                       |

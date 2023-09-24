@@ -11,6 +11,7 @@ Description:
 
 #include "debug.h"
 #include "memory.h"
+#include "graphics_base.h"
 
 // +--------------------------------------------------------------+
 // |                           Globals                            |

@@ -12,6 +12,7 @@ Description:
 #include "file_system.h"
 
 #include "intrinsics.h"
+#include "debug.h"
 #include "memory.h"
 #include "var_array.h"
 
